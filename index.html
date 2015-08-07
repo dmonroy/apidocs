@@ -2157,7 +2157,8 @@ as well as basic summary statistics:</li>
         </span><span class="err">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
     </span><span class="err">...,</span><span class="w">
-    </span><span class="nt">"send_notification"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="w">
+    </span><span class="nt">"send_notification"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"dataset_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/dataset/1"</span><span class="w">
  </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -2168,6 +2169,8 @@ as well as basic summary statistics:</li>
 <p>Multiple users&rsquo; permissions can be modified in a single request by including multiple tuples keyed by User URL. </p>
 
 <p>The &ldquo;send_notification&rdquo; key in the payload is optional; if included and True, the server will send an email invitation to all newly added users (see below), as well as to users who are granted &ldquo;edit&rdquo; privileges. </p>
+
+<p>If &ldquo;send_notification&rdquo; is included and true, you may also include a &ldquo;dataset_url&rdquo;, which is the URL that will be included in the email notifying the users that they now have access to the dataset. The web application will send the &ldquo;browse&rdquo; view URL, for example, so that when the user receives the email notification, the link they follow will take them to the relevant dataset. If &ldquo;send_notification&rdquo; is true and &ldquo;dataset_url&rdquo; is omitted, the email link will default to https://beta.crunch.io/.</p>
 
 <h4 id="add-new-user-from-within-account">Add new user from within account</h4>
 
@@ -2180,10 +2183,10 @@ as well as basic summary statistics:</li>
             </span><span class="err">...</span><span class="w">
         </span><span class="err">}</span><span class="p">,</span><span class="w">
         </span><span class="nt">"profile"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"weight"</span><span class="p">:,</span><span class="w"> 
-            </span><span class="nt">"applied_filters"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-            </span><span class="err">...</span><span class="w">
-        </span><span class="err">}</span><span class="w">
+            </span><span class="nt">"weight"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> 
+            </span><span class="nt">"applied_filters"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+
+        </span><span class="p">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
     </span><span class="err">...</span><span class="w">
 </span><span class="err">}</span><span class="w">
@@ -2239,19 +2242,23 @@ as well as basic summary statistics:</li>
         </span><span class="err">}</span><span class="w">
         </span><span class="err">*/</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="err">...</span><span class="w">
-</span><span class="err">}</span><span class="w">
+    </span><span class="nt">"send_notifications"</span><span class="err">,</span><span class="w"> </span><span class="err">true,</span><span class="w">
+    </span><span class="nt">"url_base"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/password/change/${token}/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"dataset_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/dataset/1"</span><span class="w">
+</span><span class="p">}</span><span class="w">
 </span></code></pre>
 
 <p>A new user with such email address will be created and added to the account of the user that is making the request. The new user will receive an invitation email to Crunch.io with an activation link. In case the user exists on other or the same account, no changes to the user will be made.</p>
 
-<p>If &ldquo;send_notification&rdquo; was also sent in the request, the user will receive a notification email informing her about the new shared dataset if requested so.</p>
+<p>If &ldquo;send_notification&rdquo; was included and true in the request, the user will receive a notification email informing her about the new shared dataset if requested so. New users, unless they have an OAuth provider specified, will need to set a password, and the client application should send a URL template that directs them to a place where they can set that password. To do so, include a &ldquo;url_base&rdquo; attribute in the payload, a URL template with a <code class="prettyprint">${token}</code> variable into which the server will insert the password-setting token. For the Crunch web application, this template is <code class="prettyprint">https://beta.crunch.io/password/change/${token}/</code>.</p>
 
-<p>In order to render the proper email activation link for the new users it will be necessary that the client includes an extra key on the index named <code class="prettyprint">base_url</code> which should contain a URL mask for the server to replace a password change token. It should be of the shape:</p>
+<aside class="success">
+    You may not know whether the email address you&rsquo;re sharing with already has a Crunch account. To be safe, you can always include &ldquo;url_base&rdquo; whenever you include `&ldquo;send_notifications&rdquo;: true`. If it&rsquo;s needed, your invitees will thank you. If it&rsquo;s not needed, it will be ignored.
+</aside>
 
-<p><code class="prettyprint">url_base: &quot;http://app.domain.io/password/change/${token}/&quot;</code></p>
-
-<p>Where <code class="prettyprint">${token}</code> will be replaced by the server with the appropriate value.</p>
+<aside class="notice">
+    If you share with a new user and don&rsquo;t include `&ldquo;send_notifications&rdquo;: true`, they won&rsquo;t receive an email inviting them to set a password for their new Crunch account. That&rsquo;s okay, though: they can always go to the web application and click &ldquo;Forgot password&rdquo; to send a new password reset token. 
+</aside>
 
           <h2 id="users">Users</h2>
 
