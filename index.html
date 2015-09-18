@@ -383,7 +383,389 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 
           <h2 id="appending-data">Appending Data</h2>
 
+<p>Appending data to an existing Dataset is not much different from uploading the initial data; both use a &ldquo;Batch&rdquo; resource which represents the process of importing the data from the source into the dataset. Once you have created a Source for your data, POST its URL to datasets/{id}/batches/ to start the import process. That process may take some time, depending on the size of the dataset. The returned Location is the URI of the new Batch; GET the batches catalog and look up the Batch URI in the catalog&rsquo;s index and inspect its status attribute until it moves from &ldquo;analyzing&rdquo; to &ldquo;appended&rdquo;. User interfaces may choose here to show a progress meter or some other widget.</p>
+
+<p>During the &ldquo;analyzing&rdquo; stage, the Crunch system imports the data into a temporary table, and matches its variables with any existing variables. During the &ldquo;importing&rdquo; stage, the new rows will move to the target Dataset, and once &ldquo;appended&rdquo;, the new rows will be included in all queries against that Dataset.</p>
+
+<h3 id="adding-a-subsequent-source">Adding a subsequent Source</h3>
+
+<p>Once you have created a Dataset, you can upload new files and append rows to the same Dataset as often as you like. If the structure of each file is the same as that of the first uploaded file, Crunch should automatically pass your new rows through exactly the same process as the old rows. If there are any derived variables in your Dataset, new data will be derived in the new rows following the same rules as the old data. You can follow the progress as above via the batch&rsquo;s status attribute.</p>
+
+<p>Let&rsquo;s look at an example: you had uploaded an initial CSV of 3 columns, A, B and C. Then:</p>
+
+<ul>
+<li>The Crunch system automatically converted column A from the few strings that were found in it to a Categorical type.</li>
+<li>You derived a new column D that consisted of B * C.</li>
+</ul>
+
+<p>Then you decide to upload another CSV of new rows. What will happen?</p>
+
+<p>When you POST to create the second Batch, the service will: 1) match up the new A with the old A and cast the new strings to existing categories by name, and 2) fill column D for you with B * C for each new row.</p>
+
+<p>However, from time to time, the new source has significant differences: a new variable, a renamed variable, and other changes. When you attach the first Source to a Dataset, there is nothing with which to conflict. But a subsequent POST to batches/ may result in a conflict if the new source cannot be confidently reconciled with the existing data. Even though you get a 201 Created response for the new batch resource, it will have a status of &ldquo;conflict&rdquo;.</p>
+
+<h3 id="reporting-and-resolving-conflicts">Reporting and Resolving Conflicts</h3>
+
+<p>When you attach a Source to an existing Dataset, the system attempts to match up the new data with the old. If the source&rsquo;s schema can be automatically aligned with the target Dataset, the new rows from the Batch are appended. When things go wrong, however, the Batch can be inspected to see what conflicted with the target (or vice-versa, in some cases!).</p>
+
+<p>GET the new Batch:</p>
+<pre class="highlight http"><code><span class="err">    </span><span class="nf">GET</span> <span class="nn">/api/datasets/{dataset_id}/batches/{batch_id}/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="s">    ...</span>
+<span class="s">    --------</span>
+<span class="s">    200 OK</span>
+<span class="s">    Content-Type: application/shoji</span>
+
+    {
+        "element": "shoji:entity",
+        ...
+        "body": {
+            ...,
+            "conflicts": {
+              "cdbd11/": {
+                "metadata": {...}
+                "conflicts": [{
+                  "message": "Categories do not match",
+                  "resolution": "Union of categories will be used."
+                }]
+              }
+            }
+        }
+    }
+</code></pre>
+
+<p>If any variable conflicts, it will possess one or more &ldquo;conflicts&rdquo; members. For example, if the new variable &ldquo;cdbd11&rdquo; had extra categories or was missing some categories compared to the existing variable &ldquo;cdbd11&rdquo;, the Batch resource would contain the above message and resolution. Variables which have no conflicts will still report their metadata but have <code class="prettyprint">&quot;conflicts&quot;: []</code>.</p>
+
+<p>The Crunch system will have done its best to resolve such conflicts for you. When it cannot, each Conflict object will likely only contain a &ldquo;message&rdquo; member. If it has resolved the conflict, it will add a &ldquo;resolution&rdquo; member.</p>
+
           <h2 id="deriving-variables">Deriving Variables</h2>
+
+<p>Derived variables are variables that, instead of having a column of values backing them, are functionally dependent on other variables. In Crunch, users with view-only permissions on a dataset can still make derived variables of their own–just as they can make filters. Dataset editors can also derive other types of variables as permanent additions to the dataset, available for all viewers.</p>
+
+<aside class="notice">
+    In this section, sample variable documents have been trimmed to the attributes essential to the derivation examples. Actual variable documents in the wild will have more attributes than those shown here.
+</aside>
+
+<h3 id="combining-categories">Combining categories</h3>
+
+<p>The &ldquo;combine_categories&rdquo; function takes two arguments: </p>
+
+<ul>
+<li>A reference to the categorical or categorical_array variable to be combined</li>
+<li>A definition of the categories of the new variable, including all members found in categories, plus a &ldquo;combined_ids&rdquo; key that maps the derived category to one or more categories (by id) in the input variable.</li>
+</ul>
+
+<p>Given a variable such as:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/3ad42c/variables/0000f5/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Education"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"educ"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No HS"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"High school graduate"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Some college"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2-year"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4-year"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Post-grad"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Skipped"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Not Asked"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">],</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Education"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>POST&#39;ing to the private variables catalog a Shoji Entity containing a ZCL function like:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Education (3 category)"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Combined from six-category education"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"educ3"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"expr"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"combine_categories"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/3ad42c/variables/0000f5/"</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"High school or less"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Some college"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4-year college or more"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Missing"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No data"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">-1</span><span class="p">]</span><span class="w">
+                        </span><span class="p">}</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>results in a private categorical variable with three valid categories.</p>
+
+<p>Combining the categories of a categorical array is the same as it is for categorical variables. The resulting variable is also of type &ldquo;categorical_array&rdquo;. This variable type also has a &ldquo;subvariables_catalog&rdquo;, like the variable from which it is derived, and the subvariables contained in it are derived &ldquo;combine_categories&rdquo; categorical variables.</p>
+
+<h3 id="combining-responses">Combining responses</h3>
+
+<p>For multiple response variables, you may combine responses rather than categories.</p>
+
+<p>Given a variable such as:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/455288/variables/3c2e57/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Aided awareness"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aided"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"subvariables"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="s2">"../870a2d/"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"../a8b0eb/"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"../dc444f/"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"../8e6279/"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"../f775ab/"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"../6405c2/"</span><span class="w">
+        </span><span class="p">],</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"multiple_response"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Selected"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Not selected"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Skipped"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Not asked"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No data"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">],</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Which of the following coffee brands do you recognize? Check all that apply."</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>POSTing to the variables catalog a Shoji Entity containing a ZCL function like:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Aided awareness by region"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Combined from aided brand awareness"</span><span class="w">
+        </span><span class="s2">"alias"</span><span class="err">:</span><span class="w"> </span><span class="s2">"aided_region"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"expr"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"combine_responses"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/455288/variables/3c2e57/"</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"San Francisco"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                                </span><span class="s2">"../870a2d/"</span><span class="p">,</span><span class="w">
+                                </span><span class="s2">"../a8b0eb/"</span><span class="p">,</span><span class="w">
+                                </span><span class="s2">"../dc444f/"</span><span class="w">
+                            </span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Portland"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                                </span><span class="s2">"../8e6279/"</span><span class="p">,</span><span class="w">
+                                </span><span class="s2">"../f775ab/"</span><span class="w">
+                            </span><span class="p">]</span><span class="w">
+                        </span><span class="p">},</span><span class="w">
+                        </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chicago"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"combined_ids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                                </span><span class="s2">"../6405c2/"</span><span class="w">
+                            </span><span class="p">]</span><span class="w">
+                        </span><span class="p">}</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>results in a multiple response variable with three responses. The &ldquo;selected&rdquo; state of the responses in the derived variable is an &ldquo;OR&rdquo; of the combined subvariables.</p>
+
+<h3 id="case-statements">Case statements</h3>
+
+<p>The &ldquo;case&rdquo; function derives a variable using values from the first argument. Each of the remaining arguments contains a boolean expression. These are evaluated in order in an IF, ELSE IF, ELSE IF, &hellip;, ELSE fashion; the first one that matches selects the corresponding value from the first argument. For example, if the first two boolean expressions do not match (return False) but the third one matches, then the third value in the first argument is placed into that row in the output. You may include an extra value for the case when none of the boolean expressions match; if not provided, it defaults to the system &ldquo;No Data&rdquo; missing value. </p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Market segmentation"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Super-scientific classification of people"</span><span class="w">
+        </span><span class="s2">"alias"</span><span class="err">:</span><span class="w"> </span><span class="s2">"segments"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"expr"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"case"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                        </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                            </span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+                            </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                                </span><span class="p">{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Hipsters"</span><span class="p">,</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">},</span><span class="w">
+                                </span><span class="p">{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Techies"</span><span class="p">,</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">},</span><span class="w">
+                                </span><span class="p">{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yuppies"</span><span class="p">,</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">},</span><span class="w">
+                                </span><span class="p">{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Other"</span><span class="p">,</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span><span class="w">
+                            </span><span class="p">]</span><span class="w">
+                        </span><span class="p">}</span><span class="w">
+                    </span><span class="p">}</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"and"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                        </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"in"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"55fc29/"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">]}]},</span><span class="w">
+                        </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;="</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"673dde/"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">}]}</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"and"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                        </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"in"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"889dc3/"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">]}]},</span><span class="w">
+                        </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"673dde/"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="p">}]}</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"=="</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"13cbf4/"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}]}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h3 id="weights">Weights</h3>
+
+<p>A numeric variable suitable for use as row weights can be constructed from one or more categorical variables and target proportions of their categories. The sample distribution is “raked” iteratively to each categorical marginal target to produce a set of joint values that can be used as weights. Note that available weight variables are shared by all; you may not create private weights. To create a weight variable, POST a JSON variable definition to the variables catalog describing the properties of the weight variable, with an &ldquo;expr&rdquo; member indicating to use the &ldquo;rake&rdquo; function, which takes a &ldquo;targets&rdquo; argument containing an array of Crunch Tables of targets:</p>
+<pre class="highlight shell"><code>POST /api/datasets/<span class="o">{</span>datasetid<span class="o">}</span>/variables/ HTTP/1.1
+Content-Type: application/shoji
+Content-Length: 739
+<span class="o">{</span>
+    <span class="s2">"name"</span>: <span class="s2">"weight"</span>, 
+    <span class="s2">"description"</span>: <span class="s2">"my raked weight"</span>,
+    <span class="s2">"expr"</span>: <span class="o">{</span>
+        <span class="s2">"function"</span>: <span class="s2">"rake"</span>, 
+        <span class="s2">"args"</span>: <span class="o">{</span>
+            <span class="s2">"targets"</span>: <span class="o">[</span>
+                <span class="o">{</span>
+                    <span class="s2">"{variable1.id}"</span>: <span class="o">[</span>1, 2], 
+                    <span class="s2">"target"</span>: <span class="o">[</span>49.1, 50.9]
+                <span class="o">}</span>,
+                …
+            <span class="o">]</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+---------
+201 Created
+Location: /api/datasets/<span class="o">{</span>datasetid<span class="o">}</span>/variables/<span class="o">{</span>variableid<span class="o">}</span>/
+</code></pre>
+
+<h3 id="other-transformations">Other transformations</h3>
+
+<p>Forthcoming.</p>
 
           <h2 id="array-variables">Array Variables</h2>
 
@@ -1884,7 +2266,7 @@ as well as basic summary statistics:</li>
 
 <p><code class="prettyprint">/datasets/{id}/batches/</code></p>
 
-<p>A GET on this resource returns a Shoji Catalog enumerating the batches present in the Dataset. Each tuple in the index includes a &ldquo;status&rdquo; member, which may be one of &ldquo;analyzing&rdquo;, &ldquo;conflict&rdquo;, &ldquo;importing&rdquo;, &ldquo;imported&rdquo;, or &ldquo;appended&rdquo;.</p>
+<p>A GET on this resource returns a Shoji Catalog enumerating the batches present in the Dataset. Each tuple in the index includes a &ldquo;status&rdquo; member, which may be one of &ldquo;analyzing&rdquo;, &ldquo;conflict&rdquo;, &ldquo;error&rdquo;, &ldquo;importing&rdquo;, &ldquo;imported&rdquo;, or &ldquo;appended&rdquo;.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"...datasets/837498a/batches/"</span><span class="p">,</span><span class="w">
@@ -1900,7 +2282,7 @@ as well as basic summary statistics:</li>
 
 <p>If the append operation takes more than two minutes, 202 is returned instead and the batch will continue being appended in the background. The Location header is still returned, pointing to the new batch&rsquo;s URL. The client can GET that URL to query its status.</p>
 
-<p>Batches are created in <code class="prettyprint">idle</code> status and will be advanced to <code class="prettyprint">ready</code> status once their processing starts. If there was a problem in processing it, its status will be <code class="prettyprint">conflict</code> or <code class="prettyprint">error</code>.</p>
+<p>Batches are created in <code class="prettyprint">analyzing</code> status and will be advanced through <code class="prettyprint">importing</code>, <code class="prettyprint">imported</code>, and <code class="prettyprint">appended</code> status if there are no problems. If there was a problem in processing it, its status will be <code class="prettyprint">conflict</code> or <code class="prettyprint">error</code>.</p>
 
 <p>Note that the status code will always be 202 for asynchronous or 201 for synchronous creation of the batch whether there were conflicts or not. So you need to GET the new batch&rsquo;s URL to see if the data is good to go (status <code class="prettyprint">appended</code>).</p>
 
@@ -2319,8 +2701,9 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <span class="s">200 OK</span>
 <span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
 </code></pre>
-<pre class="highlight json"><code><span class="err">//</span><span class="w"> </span><span class="err">Example</span><span class="w"> </span><span class="err">team</span><span class="w"> </span><span class="err">catalog:</span><span class="w">
-</span><span class="p">{</span><span class="w">
+<pre class="highlight plaintext"><code>// Example team catalog:
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/teams/"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List of all the teams where the current user is member"</span><span class="p">,</span><span class="w">
@@ -2380,8 +2763,9 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <span class="s">200 OK</span>
 <span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
 </code></pre>
-<pre class="highlight json"><code><span class="err">//</span><span class="w"> </span><span class="err">Example</span><span class="w"> </span><span class="err">team</span><span class="w"> </span><span class="err">entity</span><span class="w">
-</span><span class="p">{</span><span class="w">
+<pre class="highlight plaintext"><code>// Example team entity
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/teams/d07edb/"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Details for a specific team"</span><span class="p">,</span><span class="w">
@@ -2486,7 +2870,7 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <p>Supported <code class="prettyprint">permissions</code>, all boolean, include:</p>
 
 <ul>
-<li><strong>manage_members</strong>: Whether the user may add or remove users from the team, as well as modify the permissions of users on the team; i.e., PATCH the member catalog. </li>
+<li><strong>manage_members</strong>: Whether the user may add or remove users from the team, as well as modify the permissions of users on the team; i.e., PATCH the member catalog. Default is False, except for the team owner.</li>
 </ul>
 
 <h4 id="patch">PATCH</h4>
@@ -2497,7 +2881,7 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <p>In the &ldquo;index&rdquo; attribute of the catalog, object keys must be either (a) URLs of User entities or (b) email addresses. They can be mixed in a single PATCH request. Using email address allows you to invite a user to Crunch while adding them to the team if they do not yet have a Crunch account, but it is also valid as a reference to Users that already exist. </p>
 
-<h5 id="add-new-members">Add new members</h5>
+<h5 id="add-and-modify-members">Add and modify members</h5>
 <pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/teams/d07edb/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
 <span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
@@ -2517,15 +2901,19 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <span class="s">        }</span>
 <span class="s">    },</span>
 <span class="s">    "send_notification": true,</span>
-<span class="s">    "url_base": ""</span>
+<span class="s">    "url_base": "https://beta.crunch.io/password/change/${token}/"</span>
 <span class="s">}</span>
 <span class="s">--------</span>
 <span class="s">204 No Content</span>
 </code></pre>
 
-<p>If the index object keys do not correspond to users already found in the member catalog, the indicated users will be added to the team. </p>
+<p>If the index object keys correspond to users that already appear in the member catalog, their permissions will be updated with the corresponding value. In this example, user <code class="prettyprint">47193a</code>, B. A. Baracus, has been given the <code class="prettyprint">manage_members</code> permission.</p>
 
-<p>(discuss)</p>
+<p>If the index object keys do not correspond to users already found in the member catalog, the indicated users will be added to the team. And, if the indicated user, as specified by email address, does not yet exist, they will be invited to Crunch and added to the team. In this example, we added existing user <code class="prettyprint">e3211a</code>, implicitly with <code class="prettyprint">manage_members</code> set to False, to the team, and we also added &ldquo;templeton.peck@army.gov&rdquo;, who did not previously have a Crunch account. </p>
+
+<p>If &ldquo;send_notification&rdquo; was included and true in the request, new-to-Crunch users will receive a notification email informing them that they have been invited to Crunch. New users, unless they have an OAuth provider specified, will need to set a password, and the client application should send a URL template that directs them to a place where they can set that password. To do so, include a &ldquo;url_base&rdquo; attribute in the payload, a URL template with a <code class="prettyprint">${token}</code> variable into which the server will insert the password-setting token. For the Crunch web application, this template is <code class="prettyprint">https://beta.crunch.io/password/change/${token}/</code>.</p>
+
+<p>A GET on the members catalog shows the updated catalog.</p>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/teams/d07edb/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
 <span class="s">--------</span>
@@ -2559,64 +2947,6 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
             </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"templeton.peck@army.gov"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
                 </span><span class="nt">"manage_members"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-        </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-
-<h5 id="modify-existing-members-39-permissions">Modify existing members&rsquo; permissions</h5>
-
-<p>To change a team member&rsquo;s permissions, you can patch in the same way than adding users, just specifying the new permissions:</p>
-<pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/teams/d07edb/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-<span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
-<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
-<span class="s">{</span>
-<span class="s">    "element": "shoji:catalog",</span>
-<span class="s">    "index": {</span>
-<span class="s">        "https://beta.crunch.io/api/users/89eb3a/": {</span>
-<span class="s">            "permissions": {</span>
-<span class="s">                "manage_members": false</span>
-<span class="s">            }</span>
-<span class="s">        }</span>
-<span class="s">    }</span>
-<span class="s">}</span>
-<span class="s">--------</span>
-<span class="s">204 No Content</span>
-</code></pre>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/teams/d07edb/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-<span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
-<span class="s">--------</span>
-<span class="s">200 OK</span>
-<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/teams/d07edb/members/"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Catalog of users that belong to this team"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"https://beta.crunch.io/api/users/47193a/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"B. A. Baracus"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"manage_members"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-        </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"https://beta.crunch.io/api/users/41c69d/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Hannibal"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"manage_members"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-        </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"https://beta.crunch.io/api/users/e3211a/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Howling Mad Murdock"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"manage_members"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-        </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"https://beta.crunch.io/api/users/89eb3a/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"templeton.peck@army.gov"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"manage_members"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
             </span><span class="p">}</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
@@ -2625,7 +2955,7 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <h5 id="removing-members">Removing members</h5>
 
-<p>To remove members, same as with other Shoji catalogs, it is needed to PATCH the catalog with the tuple set to <code class="prettyprint">null</code>:</p>
+<p>To remove members from the team, PATCH the catalog with a <code class="prettyprint">null</code> value:</p>
 <pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/teams/d07edb/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
 <span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
