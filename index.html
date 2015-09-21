@@ -1132,6 +1132,114 @@ One dimension for the subvariables: {&ldquo;each&rdquo;: url}</li>
 
 <p>We POST the above to datasets/{id}/comparisons/ and can obtain the overlay output at datasets/{id}/comparisons/{comparison_id}/cube/. See the Endpoint Reference for details.</p>
 
+<h3 id="multitables">Multitables</h3>
+
+<p>Analyses as described above are truly multidimensional; when you add another variable, the resulting cube obtains another dimension. Sometimes, however, you want to compare analyses side by side, typically looking at several (even <em>all</em>) variables against a common set of conditioning variables. For example, you might nominate &ldquo;Gender&rdquo;, &ldquo;Age&rdquo;, and &ldquo;Race&rdquo; as the conditioning variables and cross every other variable with those, in order to quickly discover common correlations. </p>
+
+<p>Multi-table definitions mainly provide a <code class="prettyprint">template</code> member that clients can use to construct a valid query with the variable(s) of interest.</p>
+
+<p>Crunch provides a separate catalog where you can define and manage these common sets of variables. Like most catalogs, you can GET it to see which overviews are defined:</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">datasets/{id}/multitables/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+200 OK
+{
+    "element": "shoji:catalog",
+    "index": {
+        "1/": {"name": "Major demographics"},
+        "2/": {"name": "Political tendencies"}
+    }
+}
+</code></pre>
+
+<p>&hellip;POST a new overview:</p>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">datasets/{id}/multitables/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+{
+    "element": "shoji:entity",
+    "body": {
+        "name": "Geographical indicators",
+        "template": [
+            {"variable": "../variables/de85b32/"},
+            {"variable": "../variables/398620f/"},
+            {"variable": "../variables/c116a77/"}
+        ],
+        is_public: false
+    }
+}
+
+201 Created
+Location: datasets/{id}/multitables/3/
+</code></pre>
+
+<p>&hellip;or GET an individual multitable:</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">datasets/{id}/multitable/3/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+{
+    "element": "shoji:entity",
+    "body": {
+        "name": "Geographical indicators",
+        "template": [
+            {"variable": "../../variables/de85b32/"},
+            {"variable": "../../variables/398620f/"},
+            {"variable": "../../variables/c116a77/"}
+        ]
+    }
+}
+</code></pre>
+
+<p>Each multi-table is simply a list of variable references; to obtain their multiple output cubes, you <code class="prettyprint">GET datasets/{id}/cube?query=&lt;q&gt;</code> where <code class="prettyprint">&lt;q&gt;</code> is a ZCL object in JSON format (which must then be URI encoded for inclusion in the querystring). Use the &ldquo;each&rdquo; function to iterate over the overview variables, producing one output cube for each one as &ldquo;variable x&rdquo;. For example, to cross each of the above 3 variables against another variable &ldquo;449b421&rdquo;:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"each"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">},</span><span class="w">
+        </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"de85b32"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"398620f"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c116a77"</span><span class="p">}]</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"block"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cube"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">[{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"449b421"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">}],</span><span class="w">
+            </span><span class="p">{</span><span class="nt">"count"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cube_count"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[]}}</span><span class="w">
+        </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>The result will be an array of output cubes:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"definitions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"449b421"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w"> </span><span class="err">...}</span><span class="p">,</span><span class="w"> </span><span class="nt">"references"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="nt">"derived"</span><span class="p">:</span><span class="w"> </span><span class="err">False</span><span class="p">},</span><span class="w">
+                </span><span class="nt">"de85b32"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w"> </span><span class="err">...}</span><span class="p">,</span><span class="w"> </span><span class="nt">"references"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="nt">"derived"</span><span class="p">:</span><span class="w"> </span><span class="err">False</span><span class="p">},</span><span class="w">
+                </span><span class="nt">"398620f"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w"> </span><span class="err">...}</span><span class="p">,</span><span class="w"> </span><span class="nt">"references"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="nt">"derived"</span><span class="p">:</span><span class="w"> </span><span class="err">False</span><span class="p">},</span><span class="w">
+                </span><span class="nt">"c116a77"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w"> </span><span class="err">...}</span><span class="p">,</span><span class="w"> </span><span class="nt">"references"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="nt">"derived"</span><span class="p">:</span><span class="w"> </span><span class="err">False</span><span class="p">},</span><span class="w">
+                </span><span class="nt">"count"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"numeric"</span><span class="p">},</span><span class="w"> </span><span class="nt">"references"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w"> </span><span class="nt">"derived"</span><span class="p">:</span><span class="w"> </span><span class="err">True</span><span class="p">}</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"cubes"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
+                </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"crunch:cube"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"dimensions"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"definition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"449b421"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"definition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"de85b32"</span><span class="p">}],</span><span class="w">
+                </span><span class="nt">"measures"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"count"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                        </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">23</span><span class="p">],</span><span class="w">
+                        </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"definition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"count"</span><span class="p">},</span><span class="w">
+                        </span><span class="nt">"n_missing"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w">
+                    </span><span class="p">}</span><span class="w">
+                </span><span class="p">}</span><span class="w">
+            </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"crunch:cube"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"dimensions"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"definition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"449b421"</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"definition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"398620f"</span><span class="p">}],</span><span class="w">
+                </span><span class="nt">"measures"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span><span class="w">
+            </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"crunch:cube"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"dimensions"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="err">...</span><span class="p">}],</span><span class="w">
+                </span><span class="nt">"measures"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span><span class="w">
+            </span><span class="p">}]</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
           <h1 id="endpoint-reference">Endpoint Reference</h1>
 
           <h2 id="public">Public</h2>
