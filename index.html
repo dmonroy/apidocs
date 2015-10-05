@@ -1509,6 +1509,24 @@ Location: datasets/{id}/multitables/3/
 
 <p>The body must contain a &ldquo;name&rdquo;, and additional parameters &ldquo;description&rdquo; and &ldquo;archived&rdquo; are allowed. You can also include a Crunch Table in a &ldquo;table&rdquo; key, as discussed in the Feature Guide. Sending any other attribute will return a 400 response.</p>
 
+<h3 id="other-catalogs">Other catalogs</h3>
+
+<p>In addition to <code class="prettyprint">/datasets/</code>, there are a few other catalogs of datasets in the API:</p>
+
+<h4 id="team-datasets">Team datasets</h4>
+
+<p><code class="prettyprint">/teams/{team_id}/datasets/</code></p>
+
+<p>A Shoji Catalog of datasets that have been shared with this team. These datasets are not included in the primary dataset catalog. See <a href="#teams">teams</a> for more.</p>
+
+<h4 id="filter-datasets-by-name">Filter datasets by name</h4>
+
+<p><code class="prettyprint">/datasets/by_name/{dataset_name}/</code></p>
+
+<p>The <code class="prettyprint">by_name</code> catalog returns (on GET) a Shoji Catalog that is a subset of <code class="prettyprint">/datasets/</code> where the dataset name matches the &ldquo;dataset_name&rdquo; value. Matches are case sensitive.</p>
+
+<p>Verbs other than GET are not supported on this subcatalog. PATCH and POST at the primary dataset catalog.</p>
+
 <h3 id="entity">Entity</h3>
 
 <h4 id="get">GET</h4>
@@ -3164,7 +3182,7 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <h4 id="get">GET</h4>
 
-<p>GET returns a Shoji Catalog of datasets that have been shared with this team. This is a subset of the datasets in <code class="prettyprint">/datasets/</code>. See <a href="#datasets">datasets</a> for details.</p>
+<p>GET returns a Shoji Catalog of datasets that have been shared with this team. See <a href="#datasets">datasets</a> for details.</p>
 
           <h1 id="object-reference">Object Reference</h1>
 
