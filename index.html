@@ -1629,13 +1629,13 @@ Location: datasets/{id}/multitables/3/
 </tr>
 <tr>
 <td>derived</td>
+<td>boolean</td>
 <td>Whether the variable is a function of another; default: false</td>
-<td></td>
 </tr>
 <tr>
 <td>type</td>
 <td>string</td>
-<td>The string type name</td>
+<td>The string type name, one of &ldquo;numeric&rdquo;, &ldquo;text&rdquo;, &ldquo;categorical&rdquo;, &ldquo;datetime&rdquo;, &ldquo;categorical_array&rdquo;, or &ldquo;multiple_response&rdquo;</td>
 </tr>
 <tr>
 <td>subvariables</td>
@@ -1808,11 +1808,17 @@ Location: datasets/{id}/multitables/3/
 
 <p>It is encouraged, but not required, to include an &ldquo;alias&rdquo; in the body. If omitted, one will be generated from the required &ldquo;name&rdquo;. </p>
 
-<p>You may also include &ldquo;values&rdquo;, which will create the column of data corresponding to this variable definition. See Importing Data: Column-by-column for details and examples. </p>
+<p>You may also include &ldquo;values&rdquo;, which will create the column of data corresponding to this variable definition. See <a href="#column-by-column">Importing Data: Column-by-column</a> for details and examples. </p>
 
-<p>You may instead also include an &ldquo;expr&rdquo; to derive a variable as a function of other variables. In this case, &ldquo;type&rdquo; is not required because it depends on the output of the specified derivation function. For details and examples, see Deriving Variables.</p>
+<p>You may instead also include an &ldquo;expr&rdquo; to derive a variable as a function of other variables. In this case, &ldquo;type&rdquo; is not required because it depends on the output of the specified derivation function. For details and examples, see <a href="#deriving-variables">Deriving Variables</a>.</p>
 
 <p>A 201 indicates success and includes the URL of the newly-created variable in the Location header.</p>
+
+<h4 id="private-variables-catalog">Private variables catalog</h4>
+
+<p><code class="prettyprint">/datasets/{id}/variables/private/{?relative,nosubvars}</code></p>
+
+<p><code class="prettyprint">GET</code> returns a Shoji Catalog of variables, as described above, containing those variables that are private to the authenticated user. You may <code class="prettyprint">PATCH</code> this catalog to edit names, aliases, descriptions, etc. of the private variables. <code class="prettyprint">POST</code>, however, is not supported at this endpoint. To create new private variables, <code class="prettyprint">POST</code> to the main variables catalog with a <code class="prettyprint">&quot;private&quot;: true</code> body attribute.</p>
 
 <h3 id="hierarchical-order">Hierarchical Order</h3>
 
@@ -1859,7 +1865,7 @@ It is only possible to submit variables that belong to the main dataset. That is
 
 <h3 id="search">Search</h3>
 
-<p><code class="prettyprint">/datasets/{id}/variables/search/{token}/</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/search/{?q}</code></p>
 
 <p>On GET will return a Crunch Order with the variables matching the <code class="prettyprint">token</code> in the URL. The results will be under the &ldquo;Search Results&rdquo; group containing the urls for the matching variables.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
@@ -1890,54 +1896,193 @@ It is only possible to submit variables that belong to the main dataset. That is
 
 <h4 id="get">GET</h4>
 
-<p>Members:</p>
+<p>Variable entities&rsquo; <code class="prettyprint">body</code> attributes contain the following:</p>
 
-<ul>
-<li>urls: An object with names as keys and their corresponding URL&rsquo;s as values, providing links to related information. Clients should be careful to follow the given links rather than constructing their own, as the construction rules may change.</li>
-<li>description: A description of what a Variable resource is and how it behaves.</li>
-<li>specification: A URL to a formal specification for Variable objects.</li>
-<li>body: An object with the following members:
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>name</td>
+<td>string</td>
+<td>Human-friendly string identifier</td>
+</tr>
+<tr>
+<td>alias</td>
+<td>string</td>
+<td>More machine-friendly, traditional name for a variable</td>
+</tr>
+<tr>
+<td>description</td>
+<td>string</td>
+<td>Optional longer string</td>
+</tr>
+<tr>
+<td>id</td>
+<td>string</td>
+<td>Immutable internal identifier</td>
+</tr>
+<tr>
+<td>discarded</td>
+<td>boolean</td>
+<td>Whether the variable should be hidden from most views; default: false</td>
+</tr>
+<tr>
+<td>private</td>
+<td>boolean</td>
+<td>If true, the Variable is only visible to the owner and is only included in the private variables catalog, not the common catalog.</td>
+</tr>
+<tr>
+<td>derived</td>
+<td>boolean</td>
+<td>Whether the variable is a function of another; default: false</td>
+</tr>
+<tr>
+<td>type</td>
+<td>string</td>
+<td>The string type name</td>
+</tr>
+<tr>
+<td>categories</td>
+<td>array</td>
+<td>If &ldquo;type&rdquo; is &ldquo;categorical&rdquo;, &ldquo;multiple_response&rdquo;, or &ldquo;categorical_array&rdquo;, an array of category definitions (see below). Other types have an empty array.</td>
+</tr>
+<tr>
+<td>subvariables</td>
+<td>array of URLs</td>
+<td>For arrays, array of (ordered) references to subvariables</td>
+</tr>
+<tr>
+<td>derivation</td>
+<td>object</td>
+<td>For derived variables, a Crunch expression which was used to derive this variable; or null.</td>
+</tr>
+<tr>
+<td>format</td>
+<td>object</td>
+<td>An object with various members to control the display of Variable data (see below)</td>
+</tr>
+<tr>
+<td>view</td>
+<td>object</td>
+<td>An object with various members to control the display of Variable data</td>
+</tr>
+<tr>
+<td>dataset_id</td>
+<td>string</td>
+<td>The id of the Dataset to which this Variable belongs.</td>
+</tr>
+<tr>
+<td>missing_reasons</td>
+<td>object</td>
+<td>An object whose keys are reason phrases and whose values are missing codes. Missing entries in Variable data are represented by a {&ldquo;?&rdquo;: code} missing marker; clients may look up the corresponding reason phrase for each code in this one-to-one map.</td>
+</tr>
+</tbody></table>
 
-<ul>
-<li>type: the class of data in the variable. One of &ldquo;numeric&rdquo;, &ldquo;text&rdquo;, &ldquo;categorical&rdquo;, &ldquo;date&rdquo;, &ldquo;datetime&rdquo;, &ldquo;boolean&rdquo;, &ldquo;array&rdquo;, or &ldquo;object&rdquo;.</li>
-<li>categories: If the variable class is &ldquo;categorical&rdquo;, an array of category objects. The order is significant. Each object possesses the following members:</li>
-<li>_id: A numeric identifier for the category.</li>
-<li>name: A unique string identifying the category.</li>
-<li>missing: If true, the given category is marked as &ldquo;missing&rdquo;, and is omitted from most calculations.</li>
-<li>name: A friendly name for the variable. Must be unique within the dataset.</li>
-<li>alias: </li>
-<li>description: A long-form textual description of the Variable.</li>
-<li>derivation: a Crunch expression which was used to derive this variable, or null.</li>
-<li>discarded: If true, the Variable has been discarded and is not eligible for display or analysis.</li>
-<li>private: If true, the Variable is only visible to the owner and is only included in the private variables catalog, not the common catalog.</li>
-<li>format: An object with various members to control the display of Variable data:
+<p>Category objects have the following members:</p>
 
-<ul>
-<li>data: An object with a &ldquo;digits&rdquo; member, stating how many digits to display after the decimal point.</li>
-<li>summary: An object with a &ldquo;digits&rdquo; member, stating how many digits to display after the decimal point.</li>
-</ul></li>
-<li>source: unused.</li>
-<li>header_order: unused.</li>
-<li>view: An object with various members to control the display of Variable data:
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>integer</td>
+<td>identifier for the category, corresponding to values in the column of data</td>
+</tr>
+<tr>
+<td>name</td>
+<td>string</td>
+<td>A unique label identifying the category</td>
+</tr>
+<tr>
+<td>numeric_value</td>
+<td>numeric</td>
+<td>A quantity assigned to this category for numeric aggregation. May be <code class="prettyprint">null</code>.</td>
+</tr>
+<tr>
+<td>missing</td>
+<td>boolean</td>
+<td>If true, the given category is marked as &ldquo;missing&rdquo;, and is omitted from most calculations.</td>
+</tr>
+<tr>
+<td>selected</td>
+<td>boolean</td>
+<td>For categories in multiple response variables, those with <code class="prettyprint">&quot;selected&quot;: true</code> which values correspond to the &ldquo;response&rdquo; being selected. If omitted, the category is treated as not selected. Multiple response variables must have at least one category marked as selected and may have more than one.</td>
+</tr>
+</tbody></table>
 
-<ul>
-<li>show_codes: For categorical types only. If true, numeric values are shown.</li>
-<li>show_counts: If true, show counts; if false, show percents.</li>
-<li>include_missing: For categorical types only. If true, include missing categories.</li>
-<li>column_width: For &ldquo;untyped&rdquo; Variables only. The selected display width of column data, in pixels, or None.
-include_noneoftheabove: For multipleresponse types only. If true, display a &ldquo;none of the above&rdquo; category in the requested summary or analysis.</li>
-</ul></li>
-<li>dataset_id: The id of the Dataset to which this Variable belongs.</li>
-<li>max_chars: The number of characters required to display all values contained within the Variable&rsquo;s data.</li>
-<li>missing_reasons: An object whose keys are reason phrases and whose values are missing codes. Missing entries in Variable data are represented by a {&ldquo;?&rdquo;: code} missing marker; clients may look up the corresponding reason phrase for each code in this one-to-one map. Honestly, the only reason this is not in reverse order is because JSON doesn&rsquo;t allow integers as object keys.</li>
-</ul></li>
-</ul>
+<aside class="notice">
+For variables with categories, you can get the &ldquo;missing reasons&rdquo; from the category definitions. You don&rsquo;t need the &ldquo;missing_reasons&rdquo; body attribute.
+</aside>
+
+<p>Format objects may contain:</p>
+
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>data</td>
+<td>object</td>
+<td>An object with an integer &ldquo;digits&rdquo; member, stating how many digits to display after the decimal point when showing data values.</td>
+</tr>
+<tr>
+<td>summary</td>
+<td>object</td>
+<td>An object with an integer &ldquo;digits&rdquo; member, stating how many digits to display after the decimal point when showing aggregates values.</td>
+</tr>
+</tbody></table>
+
+<p>View objects may contain:</p>
+
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>show_codes</td>
+<td>boolean</td>
+<td>For categorical types only. If true, numeric values are shown.</td>
+</tr>
+<tr>
+<td>show_counts</td>
+<td>boolean</td>
+<td>If true, show counts; if false, show percents.</td>
+</tr>
+<tr>
+<td>include_missing</td>
+<td>boolean</td>
+<td>For categorical types only. If true, include missing categories.</td>
+</tr>
+<tr>
+<td>include_noneoftheabove</td>
+<td>boolean</td>
+<td>For multiple response types only. If true, display a &ldquo;none of the above&rdquo; category in the requested summary or analysis.</td>
+</tr>
+</tbody></table>
+
+<h4 id="patch">PATCH</h4>
+
+<p>PATCH variable entities to edit their metadata. </p>
 
 <h4 id="delete">DELETE</h4>
 
-<p>Calling DELETE on this resource will delete the variable. Will return Shoji View (status 200) with its return value be an array containing the newly promoted variables.</p>
+<p>Calling DELETE on this resource will delete the variable. On success, <code class="prettyprint">DELETE</code> returns 200 status with a Shoji View. When deleting array variables, this response value will contain the URLs of the (formerly sub-)variables, which are promoted to regular variables on <code class="prettyprint">DELETE</code> of the array. That is, deleting an array &ldquo;unbinds&rdquo; the subvariables, and to delete the array fully, one must then make a <code class="prettyprint">DELETE</code> request on each of the returned URLs.</p>
 
-<p>In the case of array variables, this response value will contain the urls of the forming subvariables. In case of standard variables this will be an empty array.</p>
+<p>For non-array variables, this View will be an empty array.</p>
 
 <h3 id="summary">Summary</h3>
 
