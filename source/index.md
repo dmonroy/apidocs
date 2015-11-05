@@ -23,6 +23,7 @@ includes:
   - endpoint-variable
   - endpoint-filter
   - endpoint-analysis
+  - endpoint-snapshot
   - endpoint-comparison
   - endpoint-version
   - endpoint-batch
