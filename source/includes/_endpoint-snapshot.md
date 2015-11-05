@@ -29,7 +29,7 @@ Content-Type: application/json
         "http://crunch.io/api/snapshots/f320a58264984021b2cf5230d316e49f/": {
             "url": "http://crunch.io/cdn/snapshots/f320a58264984021b2cf5230d316e49f.json", 
             "timestamp": "2015-11-04T21:36:33.897000+00:00", 
-            "reference": "http://local.crunch.io:5051/api/datasets/ds_id/decks/deck_id/"
+            "reference": ""http://crunch.io/api/datasets/c9fb9d6cba9a4617bf14ae5e8a12f602/decks/14ae5e8a12f602c9fb9d6cba9a4617bf/""
         }
     } 
 }
@@ -49,7 +49,7 @@ Content-Type: application/json
 {"body": {"queries": [{"dimensions": [{"args": [{"variable": "http://crunch.io/api/datasets/c9fb9d6cba9a4617bf14ae5e8a12f602/variables/000000/"}],
                                        "function": "bin"}],
                        "measures": {"count": {"function": "cube_count"}}}],
-          "reference": "/datasets/ds_id/decks/deck_id/"},
+          "reference": "http://crunch.io/api/datasets/c9fb9d6cba9a4617bf14ae5e8a12f602/decks/14ae5e8a12f602c9fb9d6cba9a4617bf/"},
  "element": "shoji:entity"}
 --------
 201 Created
