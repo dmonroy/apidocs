@@ -108,7 +108,8 @@ Our first pass at this might be to generate the benchmark targets in some other 
     "bases": [{
         "dimensions": [{"variable": "88dd88"}],
         "measures": {"count": {"function": "cube_count", "args": []}}
-    }],
+    }]
+}
 ```
 
 Notice, however, that we've left out the second dimension. This means that this comparison will be available for any analysis where "88dd88" is the row dimension. The base cube here is a sort of "supercube": a superset of the cubes to which we might apply the comparison. We include the measure to indicate that this comparison should apply to a "cube_count" (frequency count) involving variable "88dd88".
@@ -116,6 +117,7 @@ Notice, however, that we've left out the second dimension. This means that this 
 Then, we need to define target data. We are supplying these in a hand-generated way, so our measure is simply a static column instead of a function:
 
 ```json
+{
     "overlay": {
         "dimensions": [{"variable": "88dd88"}],
         "measures": {
@@ -164,11 +166,37 @@ POST datasets/{id}/multitables/ HTTP/1.1
     "body": {
         "name": "Geographical indicators",
         "template": [
-            {"variable": "../variables/de85b32/", query: [{"variable": "../variables/de85b32/"}]},
-            {"variable": "../variables/398620f/", query: [{"variable": "../variables/398620f/"}]},
-            {"variable": "../variables/c116a77/", query: [{"function": "bin", "args":[{"variable": "../variables/398620f/"}]}]}
+            {
+                "variable": "../variables/de85b32/",
+                "query": [
+                    {
+                        "variable": "../variables/de85b32/"
+                    }
+                ]
+            },
+            {
+                "variable": "../variables/398620f/",
+                "query": [
+                    {
+                        "variable": "../variables/398620f/"
+                    }
+                ]
+            },
+            {
+                "variable": "../variables/c116a77/",
+                "query": [
+                    {
+                        "function": "bin",
+                        "args": [
+                            {
+                                "variable": "../variables/398620f/"
+                            }
+                        ]
+                    }
+                ]
+            }
         ],
-        is_public: false
+        "is_public": false
     }
 }
 
@@ -186,9 +214,35 @@ GET datasets/{id}/multitable/3/ HTTP/1.1
     "body": {
         "name": "Geographical indicators",
         "template": [
-            {"variable": "../variables/de85b32/", query: [{"variable": "../variables/de85b32/"}]},
-            {"variable": "../variables/398620f/", query: [{"variable": "../variables/398620f/"}]},
-            {"variable": "../variables/c116a77/", query: [{"function": "bin", "args":[{"variable": "../variables/398620f/"}]}]}
+            {
+                "variable": "../variables/de85b32/",
+                "query": [
+                    {
+                        "variable": "../variables/de85b32/"
+                    }
+                ]
+            },
+            {
+                "variable": "../variables/398620f/",
+                "query": [
+                    {
+                        "variable": "../variables/398620f/"
+                    }
+                ]
+            },
+            {
+                "variable": "../variables/c116a77/",
+                "query": [
+                    {
+                        "function": "bin",
+                        "args": [
+                            {
+                                "variable": "../variables/398620f/"
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
     }
 }
@@ -244,14 +298,151 @@ The result will be an array of output cubes:
                 }
             }, {
                 "element": "crunch:cube",
-                "dimensions": [{"definition": "449b421"}, {"definition": "398620f"}],
+                "dimensions": [
+                    {
+                        "references": "449b421",
+                        "type": "etc."
+                    },
+                    {
+                        "references": "398620f",
+                        "type": "etc."
+                    }
+                ],
                 "measures": {...}
             }, {
                 "element": "crunch:cube",
-                "dimensions": [{...}],
+                "dimensions": [
+                    {
+                        "references": "449b421",
+                        "type": "etc."
+                    },
+                    {
+                        "references": "c116a77",
+                        "type": "etc."
+                    }
+                ],
                 "measures": {...}
             }]
         }
+    ]
+}
+```
+
+### Transforming analyses for presentation
+
+The `transform` member of an analysis specification (or multitable definition)
+provides a way to transform that dimension's results after computation. The 
+cube result dimension will always be derived from the `query` part of the
+request (`{variable: $variableId})`, `{function: f, args: [$variableId, …]}`, &c.
+
+### Structure
+
+A `transform` is an array of target transforms for output-dimension elements. 
+Therefore to create a valid `transform` it is generally necessary to make a cube query, inspect
+the result dimension, and proceed from there. For categorical and multiple response
+variables, elements may also be obtained from the variable entity.
+
+Transforms are designed for variables that are more stable than not, with element ids
+that inhere in the underlying elements, such as category or subvariable ids. Dynamic
+elements such as results of `bin`ning a numeric variable, may not be transformed.
+
+Consider the following example result dimension:
+
+| Name       | missing | id |
+|------------|---------|----|
+| Element A  |         | 0  |
+| Element B  |         | 1  |
+| Element C  |         | 2  |
+| Don’t know |         | 3  |
+| Not asked  | true    | 4  |
+
+A full `transform` can specify a new order of output elements, new names, 
+and in the future, bases for hypothesis testing, result sorting, and 
+aggregation of results. A `transform` has elements that look generally like
+the dimension's extent, with some optional properties: 
+
+- **id**: (required) id or array of ids in the target row/column
+- **name**: name of new target column
+- **sort**: `-1` or `1` indicating to sort results descending or ascending by this element
+- **compare**: `neq`, `leq`, `geq` indicating to test other rows/columns against
+the hypothesis that they are ≠, ≤, or ≥ to the present element
+- **combine**: `sum` (or `mean`?) — combine the indices in `[i]` to produce this target row/column
+- **hide**: suppress this element's row/column from displaying at all. Defaults to false for valid elements, true for missing, so that if an element is added, it will be present until a transform with `hide: true` is added to suppress it.
+
+A `transform` with object members can do lots of things. Suppose we want to put _Element C_ first, 
+hide the _Don’t know_, and more compactly represent the result as just _C, A, B_:
+
+```json
+transform: [
+    {'id': 2, 'name': 'C'},
+    {'id': 0, 'name': 'A'},
+    {'id': 1, 'name': 'B'},
+    {'id': 3, 'hide': true}
+]
+```
+
+#### In the future: `combine`
+
+Suppose we want to combine results in _A_ and _B_ into _Others_:
+
+```json
+transform: [
+    {'id': 2, 'name': 'C'},
+    {'id': [0,1], 'name': 'Others', 'combine': 'sum'},
+    {'id': 3, 'hide': true}
+]
+```
+
+#### Order of transform operations
+
+1. Combine
+1. Name
+1. Order
+2. Hide
+
+#### Example transform in a saved analysis
+
+In a saved analysis the transforms are an array in `display_settings` with the same extents output dimensions (as well as, of course, the query used to generate them). This syntax makes a univariate table of a multitple response variable and re-orders the result.
+
+
+```json
+{
+    "query": {
+        "dimensions": [
+            {
+                "function": "selected_array",
+                "args": [
+                    {
+                        "variable": "../variables/398620f/"
+                    }
+                ]
+            },
+            {
+                "variable": "../variables/398620f/"
+            }
+        ],
+        "measures": {
+            "count": {
+                "function": "cube_count",
+                "args": []
+            }
+        }
+    },
+    "display_settings": {
+        "transform": [
+            {
+                "id": "f007",
+                "value": "My preferred first item"
+            },
+            {
+                "id": "fee7",
+                "value": "The zeroth response"
+            },
+            {
+                "id": "c001",
+                "name": "Third response"
+            }
+        ]
     }
 }
 ```
@@ -350,8 +541,37 @@ In a saved analysis the transforms are an array in `display_settings` with the s
 In a multitable, the `transform` is part of each dimension definition object in the `template` array. 
 
 ```json
-"template": [
-    {"variable": "A", "query" [{"variable": "A"}], transform": [{}, {}]},
-    {"variable": "B", "query": [{"function": "rollup, "args": [{"value": "M"}, {"variable": "B"}] }]}
-]
+{
+    "template": [
+        {
+            "variable": "A",
+            "query": [
+                {
+                    "variable": "A"
+                }
+            ],
+            "transform": [
+                {},
+                {}
+            ]
+        },
+        {
+            "variable": "B",
+            "query": [
+                {
+                    "function": "rollup",
+                    "args": [
+                        {
+                            "value": "M"
+                        },
+                        {
+                            "variable": "B"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
 ```
+
