@@ -493,7 +493,7 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 
 <h3 id="combining-categories">Combining categories</h3>
 
-<p>The &ldquo;combine_categories&rdquo; function takes two arguments: </p>
+<p>The &ldquo;combine_categories&rdquo; function takes two arguments:</p>
 
 <ul>
 <li>A reference to the categorical or categorical_array variable to be combined</li>
@@ -694,8 +694,8 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Aided awareness by region"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Combined from aided brand awareness"</span><span class="w">
-        </span><span class="s2">"alias"</span><span class="err">:</span><span class="w"> </span><span class="s2">"aided_region"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Combined from aided brand awareness"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aided_region"</span><span class="p">,</span><span class="w">
         </span><span class="nt">"expr"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"combine_responses"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
@@ -737,13 +737,13 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 
 <h3 id="case-statements">Case statements</h3>
 
-<p>The &ldquo;case&rdquo; function derives a variable using values from the first argument. Each of the remaining arguments contains a boolean expression. These are evaluated in order in an IF, ELSE IF, ELSE IF, &hellip;, ELSE fashion; the first one that matches selects the corresponding value from the first argument. For example, if the first two boolean expressions do not match (return False) but the third one matches, then the third value in the first argument is placed into that row in the output. You may include an extra value for the case when none of the boolean expressions match; if not provided, it defaults to the system &ldquo;No Data&rdquo; missing value. </p>
+<p>The &ldquo;case&rdquo; function derives a variable using values from the first argument. Each of the remaining arguments contains a boolean expression. These are evaluated in order in an IF, ELSE IF, ELSE IF, &hellip;, ELSE fashion; the first one that matches selects the corresponding value from the first argument. For example, if the first two boolean expressions do not match (return False) but the third one matches, then the third value in the first argument is placed into that row in the output. You may include an extra value for the case when none of the boolean expressions match; if not provided, it defaults to the system &ldquo;No Data&rdquo; missing value.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Market segmentation"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Super-scientific classification of people"</span><span class="w">
-        </span><span class="s2">"alias"</span><span class="err">:</span><span class="w"> </span><span class="s2">"segments"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Super-scientific classification of people"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"segments"</span><span class="p">,</span><span class="w">
         </span><span class="nt">"expr"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"case"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
@@ -789,14 +789,14 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 Content-Type: application/shoji
 Content-Length: 739
 <span class="o">{</span>
-    <span class="s2">"name"</span>: <span class="s2">"weight"</span>, 
+    <span class="s2">"name"</span>: <span class="s2">"weight"</span>,
     <span class="s2">"description"</span>: <span class="s2">"my raked weight"</span>,
     <span class="s2">"expr"</span>: <span class="o">{</span>
-        <span class="s2">"function"</span>: <span class="s2">"rake"</span>, 
+        <span class="s2">"function"</span>: <span class="s2">"rake"</span>,
         <span class="s2">"args"</span>: <span class="o">{</span>
             <span class="s2">"targets"</span>: <span class="o">[</span>
                 <span class="o">{</span>
-                    <span class="s2">"{variable1.id}"</span>: <span class="o">[</span>1, 2], 
+                    <span class="s2">"{variable1.id}"</span>: <span class="o">[</span>1, 2],
                     <span class="s2">"target"</span>: <span class="o">[</span>49.1, 50.9]
                 <span class="o">}</span>,
                 …
@@ -1586,7 +1586,7 @@ hide the <em>Don’t know</em>, and more compactly represent the result as just 
 
 <p>Datasets are comprised of one or more batches of data uploaded to Crunch, and additional batches can be appended to datasets. Similarly, variables from other datasets can be joined onto a dataset.</p>
 
-<p>As with other objects in Crunch, references to the set of <a href="#dataset-entity">dataset entities</a> are exposed in a catalog. This catalog can be organized and ordered.</p>
+<p>As with other objects in Crunch, references to the set of dataset entities are exposed in a catalog. This catalog can be organized and ordered.</p>
 
 <h3 id="catalog">Catalog</h3>
 
@@ -1630,11 +1630,11 @@ hide the <em>Don’t know</em>, and more compactly represent the result as just 
             </span><span class="p">},</span><span class="w">
             </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cc9161"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/685722/"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"start_date"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"end_date"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"creation_time"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"current_editor"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w">
+            </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2286"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"end_date"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1986-11-26T12:05:00"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"current_editor"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/ff9443/"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Leonard Nimoy"</span><span class="w">
         </span><span class="p">},</span><span class="w">
         </span><span class="nt">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="nt">"owner_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Spock"</span><span class="p">,</span><span class="w">
@@ -1654,11 +1654,11 @@ hide the <em>Don’t know</em>, and more compactly represent the result as just 
             </span><span class="p">},</span><span class="w">
             </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a598c7"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/af432c/"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"start_date"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"end_date"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"creation_time"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"current_editor"</span><span class="p">:,</span><span class="w">
-            </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w">
+            </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2285-10-03"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"end_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2285-10-20"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1982-06-04T09:16:23.231045"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"current_editor"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
@@ -2025,7 +2025,28 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <p><code class="prettyprint">DELETE /datasets/{dataset_id}/</code></p>
 
-<p>With sufficient authorization, a successful DELETE request removes the dataset from the Crunch system and responds with 204 status. </p>
+<p>With sufficient authorization, a successful DELETE request removes the dataset from the Crunch system and responds with 204 status.</p>
+
+<h3 id="summary">Summary</h3>
+
+<p><code class="prettyprint">/datasets/{id}/summary/{?filter}</code></p>
+
+<p>Returns a Shoji View with summary information about this dataset containing
+ its number of rows (weighted and unweighted) as well as the number of
+ variables and columns.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"weighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"unweighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
 
           <h2 id="variables">Variables</h2>
 
@@ -2170,9 +2191,9 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <h4 id="patch-catalog">PATCH catalog</h4>
 
-<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, or &ldquo;discarded&rdquo; state of one or more variables. A successful request returns a 204 response. The attributes changed will be seen by all users with access to this dataset; i.e., names, descriptions, aliases, and discarded state are not merely attributes of your view of the data but of the datasets themselves. </p>
+<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, or &ldquo;discarded&rdquo; state of one or more variables. A successful request returns a 204 response. The attributes changed will be seen by all users with access to this dataset; i.e., names, descriptions, aliases, and discarded state are not merely attributes of your view of the data but of the datasets themselves.</p>
 
-<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset being modified, as shown in the &ldquo;permissions&rdquo; object in the dataset&rsquo;s catalog tuple. If you try to PATCH and are not authorized, you will receive a 403 response and no changes will be made. </p>
+<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset being modified, as shown in the &ldquo;permissions&rdquo; object in the dataset&rsquo;s catalog tuple. If you try to PATCH and are not authorized, you will receive a 403 response and no changes will be made.</p>
 
 <p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, and &ldquo;discarded&rdquo; cannot be modified here by PATCH. Attempting to modify other attributes, or including new attributes, will return a 400 response. Variable &ldquo;type&rdquo; can only be modified by the &ldquo;cast&rdquo; method, described below. The &ldquo;subvariables&rdquo; can be modified by PATCH on the variable entity. &ldquo;subvariables_catalog&rdquo; is a URL to a different variable catalog and is thus not editable, though you can navigate to its location and modify subvariable attributes there. A variable&rsquo;s &ldquo;id&rdquo; and its &ldquo;derived&rdquo; state are immutable.</p>
 
@@ -2254,9 +2275,9 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <p>See Variable Definitions for more details and examples of valid attributes, and Feature Guide: Arrays for more information on the various cases for creating array variables.</p>
 
-<p>It is encouraged, but not required, to include an &ldquo;alias&rdquo; in the body. If omitted, one will be generated from the required &ldquo;name&rdquo;. </p>
+<p>It is encouraged, but not required, to include an &ldquo;alias&rdquo; in the body. If omitted, one will be generated from the required &ldquo;name&rdquo;.</p>
 
-<p>You may also include &ldquo;values&rdquo;, which will create the column of data corresponding to this variable definition. See <a href="#column-by-column">Importing Data: Column-by-column</a> for details and examples. </p>
+<p>You may also include &ldquo;values&rdquo;, which will create the column of data corresponding to this variable definition. See <a href="#column-by-column">Importing Data: Column-by-column</a> for details and examples.</p>
 
 <p>You may instead also include an &ldquo;expr&rdquo; to derive a variable as a function of other variables. In this case, &ldquo;type&rdquo; is not required because it depends on the output of the specified derivation function. For details and examples, see <a href="#deriving-variables">Deriving Variables</a>.</p>
 
@@ -2524,7 +2545,7 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <h4 id="patch">PATCH</h4>
 
-<p>PATCH variable entities to edit their metadata. Send a Shoji Entity with a &ldquo;body&rdquo; member containing the attributes to modify. Omitted body attributes will be unchanged. </p>
+<p>PATCH variable entities to edit their metadata. Send a Shoji Entity with a &ldquo;body&rdquo; member containing the attributes to modify. Omitted body attributes will be unchanged.</p>
 
 <p>Successful requests return 204 status. Among the actions achievable by PATCHing variable entities:</p>
 
@@ -2535,7 +2556,7 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 <li>Editing format and view settings</li>
 </ul>
 
-<p>Actions that are best or only achieved elsewhere include: </p>
+<p>Actions that are best or only achieved elsewhere include:</p>
 
 <ul>
 <li>changing variable names, aliases, and descriptions, which is best accomplished by PATCHing the variable catalog, as described above;</li>
@@ -2554,7 +2575,7 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <h3 id="summary">Summary</h3>
 
-<p><code class="prettyprint">/datasets/{id}/variables/{id}/summary/{?filter_syntax,filter_url}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/{id}/summary/{?filter}</code></p>
 
 <p>A collection of summary information describing the variable. A successful GET returns an object containing various scalars and tabular results in various formats. The set of included members varies by variable type. Exclusions, filters, and weights may all alter the output.</p>
 
@@ -2640,7 +2661,7 @@ as well as basic summary statistics:</li>
 
 <h3 id="summary-view-model">Summary view model</h3>
 
-<p><code class="prettyprint">/datasets/{id}/variables/{id}/card_view/{?filter_syntax,filter_url}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/{id}/card_view/{?filter}</code></p>
 
 <p>A GET on this resource returns the information needed to render a &ldquo;variable card&rdquo; in the Crunch UI. It includes the same members as variables/{id}/ with the following alterations:</p>
 
@@ -2661,7 +2682,7 @@ as well as basic summary statistics:</li>
 
 <h4 id="univariate-frequencies">Univariate frequencies</h4>
 
-<p><code class="prettyprint">/datasets/{id}/variables/{id}/frequencies/{?filter_syntax,filter_url,exclude_exclusion_filter}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/{id}/frequencies/{?filter,exclude_exclusion_filter}</code></p>
 
 <p>An array of row objects, giving the count of distinct values. The exact members vary by type:</p>
 
@@ -2758,9 +2779,9 @@ as well as basic summary statistics:</li>
 
 <h4 id="values">Values</h4>
 
-<p><code class="prettyprint">/datasets/{id}/variables/{id}/values/{?start,total,filter_syntax,filter_url}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/{id}/values/{?start,total,filter}</code></p>
 
-<p>A GET on this set of resources will return a JSON array of values from the variable&rsquo;s data. Numeric variables will return numbers, text variables will return strings, and categorical variables will return category names for valid categories and {&ldquo;?&rdquo;: code} missing markers for missing categories. The &ldquo;start&rdquo; and &ldquo;total&rdquo; parameters paginate the results. The &ldquo;filter_syntax&rdquo; parameter, when supplied, should be a Filter object. A &ldquo;filter_url&rdquo; may be supplied instead to reference an existing Filter.</p>
+<p>A GET on this set of resources will return a JSON array of values from the variable&rsquo;s data. Numeric variables will return numbers, text variables will return strings, and categorical variables will return category names for valid categories and {&ldquo;?&rdquo;: code} missing markers for missing categories. The &ldquo;start&rdquo; and &ldquo;total&rdquo; parameters paginate the results. The &ldquo;filter&rdquo; is a Crunch filter expression.</p>
 
 <h3 id="private-variables">Private Variables</h3>
 
@@ -2771,6 +2792,94 @@ as well as basic summary statistics:</li>
 <p>Private variables are not shown in the common variable catalog. Instead, they have their own Shoji Catalog of private variables belonging to the specified dataset for the authenticated user. Aside from this separate catalog, private variable entities and the catalog behave just as described above for public variables.</p>
 
           <h2 id="filters">Filters</h2>
+
+<h3 id="catalog">Catalog</h3>
+
+<p><code class="prettyprint">/datasets/{id}/filters/</code></p>
+
+<p>GET on this resource returns a Shoji Catalog with the list of Filters that the
+current user can use on this Dataset.</p>
+
+<p>This index contains two kinds of filters: public and private, denoted by the <code class="prettyprint">is_public</code> tuple attribute. Private filters are those created by the authenticated user, and they cannot be accessed by other users. Public filters are available to all users who are authorized to view the dataset.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My filter"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"is_public"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1442EA..."</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/{owner_id}/"</span><span class="p">,</span><span class="w">
+</span><span class="err">}</span><span class="w">
+</span></code></pre>
+
+<p>The only tuple attribute editable via PATCHing the catalog is the &ldquo;name&rdquo;. A 204 response indicates a successful PATCH. Attempting to PATCH any other attribute will
+return a 400 response.</p>
+
+<p>POST a Shoji Entity to this catalog to create a new filter. Entities must include a <code class="prettyprint">name</code> and an
+<code class="prettyprint">expression</code>. If omitted, <code class="prettyprint">is_public</code> defaults to False. A successful POST yields a 201 response
+that will contain a Location header with the URL of the newly created filter.</p>
+
+<p>All users with access to the dataset can create private filters; however, only the current dataset editor can create public filters (<code class="prettyprint">is_public: true</code>). Attempting to create a public filter when not the current dataset editor results in a 403 response.</p>
+
+<h3 id="entity">Entity</h3>
+
+<p><code class="prettyprint">/datasets/{id}/filters/{id}/</code></p>
+
+<p>GET this resource to return a Shoji Entity containing the requested filter.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ac64ef"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"dataset_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"8c6c9e3"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"master__tip"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Filter name"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"is_public"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"expression"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"last_update"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2015-12-31"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>PATCH an entity to edit its <code class="prettyprint">expression</code>, <code class="prettyprint">name</code> or <code class="prettyprint">is_public</code> attributes. Successful PATCH requests return 204 status. As with the POSTing new entities to the catalog, only the dataset&rsquo;s current editor can alter <code class="prettyprint">is_public</code>.</p>
+
+<p>The <code class="prettyprint">expression</code> attribute must contain a valid Crunch filter expression.</p>
+
+<!-- Discuss valid crunch filter expressions -->
+
+<p>See <a href="#expressions">expressions</a> in the Object Reference for more details.</p>
+
+<h3 id="applied-filters">Applied filters</h3>
+
+<p><code class="prettyprint">/datasets/{id}/filters/applied/</code></p>
+
+<p>A Shoji order containing the filters applied by the current user.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/filters/applied/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/filters/28ef72/"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/filters/0ac6e1/"</span><span class="p">,</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h3 id="filtering-endpoints">Filtering endpoints</h3>
+
+<p>Some endpoints will support filtering, they will accept a <code class="prettyprint">filter</code> GET parameter
+that should be a JSON encoded object that can contain either the URL of a filter
+(available through the Filters catalog) or a filter expression.</p>
+
+<p>To filter using a filter URL, pass the following JSON object as the <code class="prettyprint">filter</code>
+parameter:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://....."</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=%7B%22filter%22%3A+%22http%3A%2F%2F...crunch.io%2Fdatasets%2Fid%2Ffilters%2Fid%2F%22%7D</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<p>To filter using a filter expression, pass the following JSON object as the
+<code class="prettyprint">filter</code> parameter:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"expression"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">".."</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="err">....</span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=%7B%22expression%22%3A+%7B%22function%22%3A+%22%3D%3D%22%2C+%22args%22%3A+%5B%7B%22variable%22%3A+%22id%22%7D%2C+%7B%22value%22%3A+%22xx%22%7D%5D%7D%7D</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
 
           <h2 id="analyses">Analyses</h2>
 
@@ -3918,11 +4027,11 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <h4 id="variable-names">Variable names</h4>
 
-<p>Crunch takes a principled stand that variable &ldquo;names&rdquo; should be for people, not for computers. </p>
+<p>Crunch takes a principled stand that variable &ldquo;names&rdquo; should be for people, not for computers.</p>
 
 <h5 id="name">name</h5>
 
-<p>You may be used to domains that have variable &ldquo;name&rdquo;, &ldquo;label&rdquo;, and &ldquo;description&rdquo;. Name is some short, unique, machine-friendlier ID like &ldquo;Q2&rdquo;; label is short and human-friendly, something like &ldquo;Brand awareness&rdquo;, and description is where you might put question wording if you have survey data. Crunch has &ldquo;alias&rdquo;, &ldquo;name&rdquo;, and &ldquo;description&rdquo;. What you may be used to thinking of as a variable name, we consider as an alias: something for more internal use, not something appropriate for a polished dataset ready to share with people who didn&rsquo;t create the dataset (See more in the &ldquo;Alias&rdquo; section below). In Crunch, the variable&rsquo;s &ldquo;name&rdquo; is what you may be used to thinking of as a label. </p>
+<p>You may be used to domains that have variable &ldquo;name&rdquo;, &ldquo;label&rdquo;, and &ldquo;description&rdquo;. Name is some short, unique, machine-friendlier ID like &ldquo;Q2&rdquo;; label is short and human-friendly, something like &ldquo;Brand awareness&rdquo;, and description is where you might put question wording if you have survey data. Crunch has &ldquo;alias&rdquo;, &ldquo;name&rdquo;, and &ldquo;description&rdquo;. What you may be used to thinking of as a variable name, we consider as an alias: something for more internal use, not something appropriate for a polished dataset ready to share with people who didn&rsquo;t create the dataset (See more in the &ldquo;Alias&rdquo; section below). In Crunch, the variable&rsquo;s &ldquo;name&rdquo; is what you may be used to thinking of as a label.</p>
 
 <p>All variables must have a name, and these names must be unique across all variables, including &ldquo;hidden&rdquo; variables (see below) but excluding subvariables (see &ldquo;Subvariables&rdquo; below). Within an array variable, subvariable names must be unique. (You can think of subvariable names within an array as being variable_name.subvariable_name, and with that approach, all &ldquo;variable names&rdquo; must be unique.)</p>
 
@@ -3930,15 +4039,15 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <h5 id="alias">alias</h5>
 
-<p>Alias is a string identifier for variables. It must be unique across all variables, including subvariables, such that it can be used as an identifier. This is what legacy statistical software typically calls a variable name. </p>
+<p>Alias is a string identifier for variables. It must be unique across all variables, including subvariables, such that it can be used as an identifier. This is what legacy statistical software typically calls a variable name.</p>
 
 <p>Aliases have several uses. Client applications, such as those exposing a scripting interface, may want to use aliases as a more machine-friendly, yet still human-readable, way of referencing variables. Aliases may also be used to help line up variables across different import batches.</p>
 
-<p>When creating variables via the API, alias is not a required field; if omitted, an alias will be generated. If an alias is supplied, it must be unique across all variables, including subvariables, and the new variable request will be rejected if the alias is not unique. When data are imported from file formats that have unique variable names, those names will in many cases be used as the alias in Crunch. </p>
+<p>When creating variables via the API, alias is not a required field; if omitted, an alias will be generated. If an alias is supplied, it must be unique across all variables, including subvariables, and the new variable request will be rejected if the alias is not unique. When data are imported from file formats that have unique variable names, those names will in many cases be used as the alias in Crunch.</p>
 
 <h5 id="description">description</h5>
 
-<p>Description is an optional string that provides more information about the variable. It is displayed in the web application on variable summary cards and with analyses. </p>
+<p>Description is an optional string that provides more information about the variable. It is displayed in the web application on variable summary cards and with analyses.</p>
 
 <h4 id="type-specific-attributes">Type-specific attributes</h4>
 
@@ -3951,7 +4060,7 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <p>name: the string name which applications should use to identify the category.
 numeric_value: the numeric value bound to each name. If no numeric value should be bound, this should be null.
 id: a read-only integer identifier for the category. These correspond to the data values.
-missing: boolean indicating whether this category should be interpreted as missing values. 
+missing: boolean indicating whether this category should be interpreted as missing values.
 selected: (optional) boolean indicating whether this category corresponds to a selected value for a dichotomized variable, i.e. part of a multiple response variable. Not required for regular categorical variables, and defaults to <code class="prettyprint">false</code> if omitted.</p>
 
 <p>Categories are valid if:</p>
@@ -3959,12 +4068,12 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 <ul>
 <li>Category names are unique within the set</li>
 <li>Category ids are unique within the set</li>
-<li>Category ids for user-defined categories are nonnegative. Negative ids are reserved for system missing reasons. See &ldquo;missing_reasons&rdquo; below. </li>
+<li>Category ids for user-defined categories are nonnegative. Negative ids are reserved for system missing reasons. See &ldquo;missing_reasons&rdquo; below.</li>
 </ul>
 
-<p>numeric_values need not be unique. There also is no requirement for Categories in a dichotomized subvariable that only one Category be marked &ldquo;selected&rdquo;. </p>
+<p>numeric_values need not be unique. There also is no requirement for Categories in a dichotomized subvariable that only one Category be marked &ldquo;selected&rdquo;.</p>
 
-<p>The order of the array defines the order of the categories, and thus the order in which aggregate data will be presented. This order can be changed by saving a reordered set of Categories. </p>
+<p>The order of the array defines the order of the categories, and thus the order in which aggregate data will be presented. This order can be changed by saving a reordered set of Categories.</p>
 
 <h5 id="subvariables">subvariables</h5>
 
@@ -4073,26 +4182,39 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 
 <h3 id="expressions">Expressions</h3>
 
-<p>When attempting to describe which columns we&rsquo;d like to use, we construct expressions. For example, to add columns X and Y into a third column Z, we could write &ldquo;Z = X + Y&rdquo;. However, we have to be a bit careful that we distinguish between &ldquo;Z = X + Y&rdquo; where Y is the identifier of a variable, and &ldquo;Z = X + Y&rdquo; where we want to append the character &ldquo;Y&rdquo; to each value in variable X. We also have to distinguish a variable named &ldquo;Qr&rdquo; from a function named &ldquo;Qr&rdquo;. Therefore, we wrap up each term in the expression in an object which declares whether the term is a variable, a value, or a function, etc.</p>
+<p>Crunch expressions are used to compute on a dataset, to do nuanced selects, updates, and deletes, and to accomplish many other routine operations. Expressions are JSON objects in which each term is wrapped in an object which declares whether the term is a variable, a value, or a function, etc. While verbose, doing so allows us to be more explicit about the operations we wish to do.</p>
 
-<h4 id="value-terms">Value terms</h4>
-
-<p>Terms refer to data values when they include a &ldquo;value&rdquo; member. Its value is any individual data value; that is, a value that is addressable by a column and row in the dataset. For example:</p>
-
-<ul>
-<li>{&ldquo;value&rdquo;: 13}</li>
-<li>{&ldquo;value&rdquo;: [3, 4, 5]}</li>
-</ul>
-
-<p>Note that individual values may themselves be complex arrays or objects, depending on their type. You may explicitly include a &ldquo;type&rdquo; member in the object, or let Crunch infer the type.</p>
+<p>Expressions generally contain references to <strong>variables</strong>, <strong>values</strong>, or <strong>columns</strong> of values, often composed in <strong>functions</strong>. The output of expressions can be other variables, values, boolean masks, or cube aggregations, depending on the context and expression content. Some endpoints have special semantics, but the general structure of the expressions follows the model described below.</p>
 
 <h4 id="variable-terms">Variable terms</h4>
 
 <p>Terms refer to variables when they include a &ldquo;variable&rdquo; member. The value is the URL for the desired variable. For example:</p>
 
 <ul>
-<li>{&ldquo;variable&rdquo;: &ldquo;../variables/X/&rdquo;}</li>
-<li>{&ldquo;variable&rdquo;: &ldquo;../joins/abcd/variables/Y/&rdquo;}</li>
+<li><code class="prettyprint">{&quot;variable&quot;: &quot;../variables/X/&quot;}</code></li>
+<li><code class="prettyprint">{&quot;variable&quot;: &quot;https://beta.crunch.io/api/datasets/48ffc3/joins/abcd/variables/Y/&quot;}</code></li>
+</ul>
+
+<p>URLs must either be absolute or relative to the URL of the current request. For example, to refer to a variable in a query at <code class="prettyprint">https://beta.crunch.io/api/datasets/48ffc3/cube/</code>, a variable at <code class="prettyprint">https://beta.crunch.io/api/datasets/48ffc3/variables/9410fc/</code> may be referenced by its full URL or by &ldquo;../variables/9410fc/&rdquo;.</p>
+
+<h4 id="value-terms">Value terms</h4>
+
+<p>Terms refer to data values when they include a &ldquo;value&rdquo; member. Its value is any individual data value; that is, a value that is addressable by a column and row in the dataset. For example:</p>
+
+<ul>
+<li><code class="prettyprint">{&quot;value&quot;: 13}</code></li>
+<li><code class="prettyprint">{&quot;value&quot;: [3, 4, 5]}</code></li>
+</ul>
+
+<p>Note that individual values may themselves be complex arrays or objects, depending on their type. You may explicitly include a &ldquo;type&rdquo; member in the object, or let Crunch infer the type. One way to do this is to use the &ldquo;typeof&rdquo; function to indicate that the value you&rsquo;re specifying corresponds to the exact type of an existing variable. See &ldquo;functions&rdquo; below for more details.</p>
+
+<h4 id="column-terms">Column terms</h4>
+
+<p>Terms refer to columns (construct them, actually) when they include a &ldquo;column&rdquo; member. The value is an array of data values. You may include &ldquo;type&rdquo; and/or &ldquo;references&rdquo; members as well.</p>
+
+<ul>
+<li><code class="prettyprint">{&quot;column&quot;: [1, 2, 3, 17]}</code></li>
+<li><code class="prettyprint">{&quot;column&quot;: [{&quot;?&quot;: -2}, 1, 4, 1], &quot;type&quot;: {&quot;class&quot;: &quot;categorical&quot;, &quot;categories&quot;: [...], ...}}</code></li>
 </ul>
 
 <h4 id="function-terms">Function terms</h4>
@@ -4100,26 +4222,28 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 <p>Terms refer to functions (and operators) when they include a &ldquo;function&rdquo; member. The value is the identifier for the desired function. They parameterize the function with an &ldquo;args&rdquo; member, whose value is an array of terms, one for each argument. Examples:</p>
 
 <ul>
-<li>{&ldquo;function&rdquo;: &ldquo;==&rdquo;, &ldquo;args&rdquo;: [{&ldquo;variable&rdquo;: &ldquo;../variables/X/&rdquo;}, {&ldquo;value&rdquo;: 13}]}</li>
-<li>{&ldquo;function&rdquo;: &ldquo;contains&rdquo;, &ldquo;args&rdquo;: [{&ldquo;variable&rdquo;: &ldquo;../joins/abcd/variables/Y/&rdquo;}, {&ldquo;value&rdquo;: &ldquo;foo&rdquo;}]}</li>
+<li><code class="prettyprint">{&quot;function&quot;: &quot;==&quot;, &quot;args&quot;: [{&quot;variable&quot;: &quot;../variables/X/&quot;}, {&quot;value&quot;: 13}]}</code></li>
+<li><code class="prettyprint">{&quot;function&quot;: &quot;contains&quot;, &quot;args&quot;: [{&quot;variable&quot;: &quot;../joins/abcd/variables/Y/&quot;}, {&quot;value&quot;: &quot;foo&quot;}]}</code></li>
 </ul>
 
 <p>You may include a &ldquo;references&rdquo; member to provide a name, alias, description, etc to the output of the function.</p>
 
-<h4 id="column-terms">Column terms</h4>
+<!-- 
+##### Supported functions
 
-<p>Terms refer to columns (construct them, actually) when they include a &ldquo;column&rdquo; member. The value is an array of data values. You may include &ldquo;type&rdquo; and/or &ldquo;references&rdquo; members as well.</p>
+LIST THEM -->
 
-<ul>
-<li>{&ldquo;column&rdquo;: [1, 2, 3, 17]}</li>
-<li>{&ldquo;column&rdquo;: [{&ldquo;?&rdquo;: -2}, 1, 4, 1], &ldquo;type&rdquo;: {&ldquo;class&rdquo;: &ldquo;categorical&rdquo;, &ldquo;categories&rdquo;: [&hellip;], &hellip;}}</li>
-</ul>
+<!-- typeof -->
+
+<h4 id="filter-terms">Filter terms</h4>
+
+<p>Terms that refer to filters entities by URL are shorthand for the boolean expression stored in the entity. So, <code class="prettyprint">{&quot;filter&quot;: &quot;../filters/59fc4d/&quot;}</code> yields the Crunch expression contained in the Filter entity&rsquo;s &ldquo;expression&rdquo; attribute. Filter terms can be combined together with other expressions as well. For example, <code class="prettyprint">{&quot;function&quot;: &quot;and&quot;, &quot;args&quot;: [{&quot;filter&quot;: &quot;../filters/59fc4d/&quot;}, {&quot;function&quot;: &quot;==&quot;, &quot;args&quot;: [{&quot;variable&quot;: &quot;../variables/X/&quot;}, {&quot;value&quot;: 13}]}]}</code> would &ldquo;and&rdquo; together the boolean expression in filter 59fc4d with the <code class="prettyprint">X == 13</code> expression.</p>
 
 <h2 id="documents">Documents</h2>
 
 <h3 id="shoji">Shoji</h3>
 
-<p>Many representations returned from the API are Shoji Documents. Shoji is a media type designed to foster scalable API&rsquo;s. Shoji is built with JSON, so any JSON parser should be able to at least deserialize Shoji documents. Shoji adds four document types: Entity, Catalog, View, and Order.</p>
+<p>Most representations returned from the API are Shoji Documents. Shoji is a media type designed to foster scalable API&rsquo;s. Shoji is built with JSON, so any JSON parser should be able to at least deserialize Shoji documents. Shoji adds four document types: Entity, Catalog, View, and Order.</p>
 
 <h4 id="entity">Entity</h4>
 
@@ -4140,35 +4264,6 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 </span></code></pre>
 
 <p>In general, an HTTP GET to the &ldquo;self&rdquo; URL will return the document, and a PUT of the same will update it. PUT should not be used for partial updates–use PATCH for that instead. In general, each member included in the &ldquo;body&rdquo; of a PATCH message will replace the current representation; attributes not included will not be altered. There is no facility to remove an attribute from an Entity.body via PATCH. In some cases, however, even finer-grained control is possible via PATCH; see the Endpoint Reference for details.</p>
-
-<h5 id="dataset-entity">Dataset Entity</h5>
-
-<p>A Dataset entity is a Shoji Entity which defines a rectangular collection of variables. It has the following members:
- * description: A textual discussion of the Dataset resource in general.
- * specification: A link to a formal specification of the Dataset resource format.
- * catalogs: An object containing links to related catalogs:
-   * batches: the collection of batches contained by the Dataset. Each batch represents a set of inserted rows.
-   * variables: the collection of variables contained by the Dataset.
-   * &hellip;
- * fragments:
-   * table: the editable data array for this Dataset.
- * body: An editable object whose members include:
-   * archived: If true, the Dataset is hidden from most views.
-   * creation_time: an ISO-8601 timestamp, like &ldquo;2014-07-07T19:15:29.541633+00:00&rdquo;.
-   * description: A long-form, textual description of the Dataset.
-   * name: A unique, friendly name for the Dataset.
-   * user_id: The id of a User resource which owns the Dataset.
-   * weight: The URI of a Variable in the Dataset which should be used for weights (and is therefore hidden from most other views and controls), or null.</p>
-
-<h5 id="variable-entity">Variable Entity</h5>
-
-<p>A Variable entity is a Shoji Entity which defines a variable. It has the following members:
- * description: A description of what a Variable resource is and how it behaves.
- * specification: A URL to a formal specification for Variable objects.
- * body: An object with appropriate members from the variable&rsquo;s Definition, plus the following additional member:
-   * dataset_id: The id of the Dataset to which this Variable belongs. This is also published in the dataset_url, which you should probably prefer.</p>
-
-<p>When creating a Variable entity, you only need to specify the &ldquo;body&rdquo;; attributes such as &ldquo;description&rdquo; and &ldquo;specification&rdquo; are returned as part of the Shoji Entity but are not required to create a Variable.</p>
 
 <h4 id="catalog">Catalog</h4>
 
@@ -4192,7 +4287,9 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 
 <p>Each key in the index is a URL (possibly relative to &ldquo;self&rdquo;) which refers to a different resource. Often, these are Shoji Entity documents, but not always. The index also allows some attributes to be published as a set, rather than in each individual Entity. This allows clients to act on the collection as a whole, such as when rendering a list of references from which the user might select one entity.</p>
 
-<p>In general, an HTTP GET to the &ldquo;self&rdquo; URL will return the document, and a PUT of the same will update it. Many catalogs allow POST to add a new entity to the collection. PUT should not be used for partial updates–use PATCH for that instead. In general, each member included in the &ldquo;index&rdquo; of a PATCH message will replace the current representation; tuples not included will not be altered. Tuples included in a PATCH which are not present in the server&rsquo;s current representation of the index may be added; it is up to each resource whether to support (and document!) this approach or prefer POST to add entities to the collection. There is no facility to remove a tuple from a Catalog.index via PATCH–use PUT for that instead. In some cases, even finer-grained control is possible via PATCH; see the Endpoint Reference below for details.</p>
+<p>In general, an HTTP GET to the &ldquo;self&rdquo; URL will return the document, and a PUT of the same will update it. Many catalogs allow POST to add a new entity to the collection. PUT should not be used for partial updates&ndash;use PATCH for that instead. In general, each member included in the &ldquo;index&rdquo; of a PATCH message will replace the current representation; tuples not included will not be altered. Tuples included in a PATCH which are not present in the server&rsquo;s current representation of the index may be added; it is up to each resource whether to support (and document!) this approach or prefer POST to add entities to the collection. In general, catalogs that <em>contain</em> entities get new entities created by POST, while catalogs that <em>collect</em> entities that are contained by other catalogs (e.g. a catalog of users who have permissions on a dataset) will have entities added by PATCH.</p>
+
+<p>Similarly, removing entities from catalogs is supported in one of two ways, typically varying by catalog type. For catalogs that contain entities, entities are removed only by DELETE on the entity&rsquo;s URL (its key in the Catalog.index). In contrast, for catalogs that collect entities, entities are removed by PATCHing the catalog with a <code class="prettyprint">null</code> tuple. This removes the entity from the catalog but does not delete the entity (which is contained by a different catalog). T</p>
 
 <h4 id="view">View</h4>
 
@@ -4332,7 +4429,7 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 
 <h6 id="n">n</h6>
 
-<p>The number of rows considered for all measures. </p>
+<p>The number of rows considered for all measures.</p>
 
 <h6 id="measures">measures</h6>
 
