@@ -2027,26 +2027,115 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <p>With sufficient authorization, a successful DELETE request removes the dataset from the Crunch system and responds with 204 status.</p>
 
-<h3 id="summary">Summary</h3>
+<h4 id="views">Views</h4>
+
+<h5 id="applied-filters">Applied filters</h5>
+
+<h5 id="cube">Cube</h5>
+
+<p><code class="prettyprint">/datasets/{id}/cube/?q</code></p>
+
+<p>See <a href="#multidimensional-analysis">Multidimensional Analysis</a>.</p>
+
+<h5 id="export">Export</h5>
+
+<p><code class="prettyprint">/datasets/{id}/export/</code></p>
+
+<p>GET returns a Shoji View of available dataset export formats.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"spss"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/spss/"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="summary">Summary</h5>
 
 <p><code class="prettyprint">/datasets/{id}/summary/{?filter}</code></p>
 
-<p>Returns a Shoji View with summary information about this dataset containing
- its number of rows (weighted and unweighted) as well as the number of
- variables and columns.</p>
+<h6 id="query-parameters">Query Parameters</h6>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>filter</td>
+<td>A Crunch filter expression</td>
+</tr>
+</tbody></table>
+
+<p>GET returns a Shoji View with summary information about this dataset containing
+ its number of rows (weighted and unweighted, with and without your applied filters), as well as the number of variables and columns. The column count will differ from the variable count when derived and array variables are present&ndash;these variable types don&rsquo;t necessarily have their own columns of data behind them. The column count is useful for estimating load time and file size when exporting.</p>
+
+<p>If a <code class="prettyprint">filter</code> is included, the &ldquo;filtered&rdquo; counts will be with respect to that expression. If omitted, your applied filters will be used.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"weighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"unweighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/summary/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"unweighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"weighted"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"filtered"</span><span class="p">:</span><span class="w"> </span><span class="mf">2000.0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mf">2000.0</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="mi">529</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">530</span><span class="w">
+    </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
+
+<h4 id="fragments">Fragments</h4>
+
+<h5 id="table">Table</h5>
+
+<h5 id="state">State</h5>
+
+<h5 id="exclusion">Exclusion</h5>
+
+<p><code class="prettyprint">/datasets/{id}/exclusion/</code></p>
+
+<p>Exclusion filters allow you to drop rows of data without permanently deleting them.</p>
+
+<p>GET on this resource returns a Shoji Entity with a filter &ldquo;expression&rdquo; attribute in its body. Rows that match the filter expression will be excluded from all views of the data.</p>
+
+<p>PATCH the &ldquo;expression&rdquo; attribute to modify. An empty &ldquo;expression&rdquo; object, like <code class="prettyprint">{&quot;body&quot;: {&quot;expression&quot;: {}}}</code>, is equivalent to &ldquo;no exclusion&rdquo;, i.e. no rows are dropped.</p>
+
+<h5 id="stream">Stream</h5>
+
+<h5 id="main-deck">Main deck</h5>
+
+<h4 id="catalogs">Catalogs</h4>
+
+<h5 id="batches">Batches</h5>
+
+<h5 id="filters">Filters</h5>
+
+<h5 id="variables">Variables</h5>
+
+<h5 id="actions">Actions</h5>
+
+<h5 id="savepoints">Savepoints</h5>
+
+<h5 id="weight-variables">Weight variables</h5>
+
+<h5 id="joins">Joins</h5>
+
+<h5 id="multitables">Multitables</h5>
+
+<h5 id="comparisons">Comparisons</h5>
+
+<h5 id="forks">Forks</h5>
+
+<h5 id="decks">Decks</h5>
+
+<h5 id="permissions">Permissions</h5>
 
           <h2 id="variables">Variables</h2>
 
@@ -2323,7 +2412,7 @@ modified via PATCH here are not modified, the request will succeed.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
     </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"weight_variables"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"entities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">&lt;var_url&gt;...</span><span class="p">]</span><span class="w">
+    </span><span class="nt">"entities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://beta.crunch.io/api/datasets/42d0a3/variables/42229f"</span><span class="p">]</span><span class="w">
   </span><span class="p">}]</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
@@ -2336,10 +2425,10 @@ It is only possible to submit variables that belong to the main dataset. That is
 
 <p><code class="prettyprint">/datasets/{id}/variables/search/{?q}</code></p>
 
-<p>On GET will return a Crunch Order with the variables matching the <code class="prettyprint">token</code> in the URL. The results will be under the &ldquo;Search Results&rdquo; group containing the urls for the matching variables.</p>
+<p>On GET will return a Crunch Order with the variables matching the <code class="prettyprint">q</code> token in the URL. The results will be under the &ldquo;Search Results&rdquo; group containing the urls for the matching variables.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/4e9a00/variables/search/something/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/4e9a00/variables/search/?q=something"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Returns a view with a group containing all the variables that match the given query"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
@@ -2551,7 +2640,8 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <ul>
 <li>Editing category attributes and adding categories. Include all categories.</li>
-<li>Reordering subvariables in an array</li>
+<li>Remove categories by sending all categories except for the ones you wish to remove. You can only remove categories that don&rsquo;t have any corresponding data values. Attempting to remove categories that have data associated will fail with a 400 response status.</li>
+<li>Reordering subvariables in an array. Unlike categories, subvariables cannot be added or removed via PATCH here.</li>
 <li>Editing derivation expressions</li>
 <li>Editing format and view settings</li>
 </ul>
@@ -2637,7 +2727,7 @@ as well as basic summary statistics:</li>
 <p>And the typical &ldquo;frequencies&rdquo; member is expanded into a custom &ldquo;categories&rdquo; member:</p>
 
 <ul>
-<li>categories: An array of row objects. Each row represents a distinct category (whether valid or missing), and includes its id the &ldquo;_id&rdquo; member (note the leading underscore), and its name as the &ldquo;name&rdquo; member. The &ldquo;missing&rdquo; member is true or false depending on whether the category is marked missing or not. The number of entries which possess that value is included as the &ldquo;count&rdquo; member.</li>
+<li>categories: An array of row objects. Each row represents a distinct category (whether valid or missing), and includes its id the <code class="prettyprint">_id</code> member (note the leading underscore), and its name as the &ldquo;name&rdquo; member. The &ldquo;missing&rdquo; member is true or false depending on whether the category is marked missing or not. The number of entries which possess that value is included as the &ldquo;count&rdquo; member.</li>
 </ul>
 
 <h4 id="text">text</h4>
@@ -2659,27 +2749,6 @@ as well as basic summary statistics:</li>
 <li>max_chars: The number of characters of the longest value in the data.</li>
 </ul>
 
-<h3 id="summary-view-model">Summary view model</h3>
-
-<p><code class="prettyprint">/datasets/{id}/variables/{id}/card_view/{?filter}</code></p>
-
-<p>A GET on this resource returns the information needed to render a &ldquo;variable card&rdquo; in the Crunch UI. It includes the same members as variables/{id}/ with the following alterations:</p>
-
-<p>A &ldquo;summary&rdquo; member is added to the body, with the same output as <code class="prettyprint">variable/{id}/summary/</code>.</p>
-
-<p>For categorical and multiple response variables, body.summary.categories is removed, and body.categories is instead munged to include new members in each category object:</p>
-
-<ul>
-<li>count: taken from summary.categories.</li>
-<li>max_count: the largest &ldquo;count&rdquo; member from all categories.</li>
-<li>total_count: the sum of the &ldquo;count&rdquo; members from all categories.</li>
-<li>percent: (100 * count) / total_count, or {&ldquo;?&rdquo;: -1} if no percent could be obtained.</li>
-</ul>
-
-<p>A &ldquo;weight&rdquo; member is added to the body if the Variable is being used as a weight variable for the Dataset.</p>
-
-<p>The &ldquo;urls&rdquo; member is reduced to just a &ldquo;variable_url&rdquo; member, which points back at the transactional view of the variable and &ldquo;dataset_url&rdquo; which points back to the dataset.</p>
-
 <h4 id="univariate-frequencies">Univariate frequencies</h4>
 
 <p><code class="prettyprint">/datasets/{id}/variables/{id}/frequencies/{?filter,exclude_exclusion_filter}</code></p>
@@ -2688,7 +2757,7 @@ as well as basic summary statistics:</li>
 
 <ul>
 <li>numeric: Each row represents a distinct valid value, and includes it as the &ldquo;value&rdquo; member. The number of entries which possess that value is included as the &ldquo;count&rdquo; member.</li>
-<li>categorical: Each row represents a distinct category (whether valid or missing), and includes its id the &ldquo;_id&rdquo; member (note the leading underscore), and its name as the &ldquo;name&rdquo; member. The &ldquo;missing&rdquo; member is true or false depending on whether the category is marked missing or not. The number of entries which possess that value is included as the &ldquo;count&rdquo; member.</li>
+<li>categorical: Each row represents a distinct category (whether valid or missing), and includes its id the <code class="prettyprint">_id</code> member (note the leading underscore), and its name as the &ldquo;name&rdquo; member. The &ldquo;missing&rdquo; member is true or false depending on whether the category is marked missing or not. The number of entries which possess that value is included as the &ldquo;count&rdquo; member.</li>
 <li>text: Each row represents a distinct valid value, and includes it as the &ldquo;value&rdquo; member. The number of entries which possess that value is included as the &ldquo;count&rdquo; member. The length of the array is limited to 10 entries; if more than 10 distinct values are present in the data, an 11th row is added with a &ldquo;value&rdquo; member of &ldquo;(Others)&rdquo;, summing their counts.</li>
 </ul>
 
