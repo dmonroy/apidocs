@@ -404,9 +404,35 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 
 <p>However, from time to time, the new source has significant differences: a new variable, a renamed variable, and other changes. When you attach the first Source to a Dataset, there is nothing with which to conflict. But a subsequent POST to batches/ may result in a conflict if the new source cannot be confidently reconciled with the existing data. Even though you get a 201 Created response for the new batch resource, it will have a status of &ldquo;conflict&rdquo;.</p>
 
-<h3 id="reporting-conflicts">Reporting Conflicts</h3>
+<h3 id="reporting-and-resolving-conflicts">Reporting and Resolving Conflicts</h3>
 
-<p>When you attach a Source to an existing Dataset, the system attempts to match up the new data with the old. If the source&rsquo;s schema can be automatically aligned with the target Dataset, the new rows from the Batch are appended.  The Crunch system will do its best to resolve conflicts for you.  When things go wrong, the status of the branch will be set to &ldquo;conflict.&rdquo;  There may be conflicts that have been resolved; this will not result in a status of &ldquo;conflict&rdquo; </p>
+<p>When you attach a Source to an existing Dataset, the system attempts to match up the new data with the old. If the source&rsquo;s schema can be automatically aligned with the target Dataset, the new rows from the Batch are appended. When things go wrong, however, the Batch can be inspected to see what conflicted with the target (or vice-versa, in some cases!).</p>
+
+<p>GET the new Batch:</p>
+<pre class="highlight http"><code><span class="err">    </span><span class="nf">GET</span> <span class="nn">/api/datasets/{dataset_id}/batches/{batch_id}/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="s">    ...</span>
+<span class="s">    --------</span>
+<span class="s">    200 OK</span>
+<span class="s">    Content-Type: application/shoji</span>
+
+    {
+        "element": "shoji:entity",
+        "body": {
+            "conflicts": {
+              "cdbd11/": {
+                "metadata": {}
+                "conflicts": [{
+                  "message": "Types do not match and cannot be converted",
+                }]
+              }
+            }
+        }
+    }
+</code></pre>
+
+<p>If any variable conflicts, it will possess one or more &ldquo;conflicts&rdquo; members. For example, if the new variable &ldquo;cdbd11&rdquo; had a different type that could not be converted compared to the existing variable &ldquo;cdbd11&rdquo;, the Batch resource would contain the above message.  Only unresolvable conflicts will be shown; if a variable is not reported in the conflicts object, it appended cleanly.</p>
+
+<p>See <a href="#batches">Batches</a> for more details on batch entities and conflicts.</p>
 
 <h3 id="streaming-rows">Streaming rows</h3>
 
@@ -426,7 +452,7 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
     <span class="p">})</span>
 </code></pre>
 
-<p>The variable ids must correspond to existing variables in the dataset. The Python code shows how to efficiently map aliases to ids. The data must match the target variable types, so that we can process the row as quickly as possible. We want no casting or other guesswork slowing us down here. Among other things, this means that categorical values must be represented as Crunch&rsquo;s assigned category ids, not names or numeric values.</p>
+<p>Streamed values must be keyed either by id or by alias. The variable ids/aliases must correspond to existing variables in the dataset. The Python code shows how to efficiently map aliases to ids. The data must match the target variable types so that we can process the row as quickly as possible. We want no casting or other guesswork slowing us down here. Among other things, this means that categorical values must be represented as Crunch&rsquo;s assigned category ids, not names or numeric values.</p>
 
 <p>You may also send more than one row at a time if you prefer. For example, your data collection system may already post-process row data in, say, 5 minute increments. The more rows you can send together, the less overhead spent processing each one and the more you can send in a given time. Send multiple lines of line-delimited JSON, or if using pycrunch, a list of dicts rather than a single dict.</p>
 
@@ -2108,6 +2134,154 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <h5 id="permissions">Permissions</h5>
 
+          <h2 id="table">Table</h2>
+
+<p>All datasets contain a /table/ endpoint which allows access the full data
+values. It provides granular control over the rows and columns for each dataset.</p>
+
+<h3 id="fetching-values">Fetching values</h3>
+
+<h4 id="get">GET</h4>
+
+<p>When authenticated, GET returns a 200 status with a Shoji Table of the 
+dataset&rsquo;s data. It will expose all the variables that are visible by the logged
+user (Public + privates created by them) as well as the exclusion filter 
+applied (if any).</p>
+
+<p>A <code class="prettyprint">metadata</code> section contains the definitions of all the variables matched
+by variable ID with the corresponding entry under <code class="prettyprint">data</code>.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/:id/table/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https:\/\/alpha.crunch.io\/api\/datasets\/:id\/table\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"crunch:table"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"000007"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000004"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000005"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000003"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w"> </span><span class="s2">"MORE JUNK"</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000000"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000001"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"2000-01-01T00:00:00"</span><span class="p">,</span><span class="w"> </span><span class="s2">"2000-01-02T00:00:00"</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"?"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000008"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"000009"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"00000c"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="err">}</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"A Crunch Table of data for this dataset."</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"000007"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"d"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000004"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bool1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mymrset | Response #1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bool1"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000005"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bool2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mymrset | Response #2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bool2"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000003"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"str"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"str"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"missing_reasons"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"No Data"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"40 character string"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000000"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"x"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"blue"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"8"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"9"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Numeric variable with value labels"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000001"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"y"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"datetime"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"missing_reasons"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"No Data"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"y"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"resolution"</span><span class="p">:</span><span class="w"> </span><span class="s2">"s"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Date variable"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000008"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"d"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"000009"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_3"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ca_subvar_3"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"d"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"00000c"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical_array"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical_array"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical_array"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"c"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"d"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"selected"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"No Data"</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre>
+
+<h4 id="filtering">Filtering</h4>
+
+<p>This endpoint accepts the same filter parameters described under 
+Filtering Endpoints</p>
+
           <h2 id="variables">Variables</h2>
 
 <h3 id="catalog">Catalog</h3>
@@ -2118,9 +2292,13 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <h4 id="get-catalog">GET catalog</h4>
 
-<p>When authenticated and authorized to view the given dataset, GET returns 200 status with a Shoji Catalog of variables in the dataset. If authorization is lacking, response will instead be 404.</p>
+<p>When authenticated and authorized to view the given dataset, GET returns 200
+status with a Shoji Catalog of variables in the dataset. If authorization is
+lacking, response will instead be 404.</p>
 
-<p>Private variables are not included in the index of this catalog, although entities may be present at <code class="prettyprint">variables/{id}/</code>. See Private Variables for an index of those.</p>
+<p>Private variables are not included in the index of this catalog, although
+entities may be present at <code class="prettyprint">variables/{id}/</code>. See Private Variables for an
+index of those.</p>
 
 <p>Catalog tuples contain the following keys:</p>
 
@@ -2175,6 +2353,21 @@ modified via PATCH here are not modified, the request will succeed.</p>
 <td>subvariables_catalog</td>
 <td>URL</td>
 <td>For arrays, link to a Shoji Catalog of subvariables</td>
+</tr>
+<tr>
+<td>resolution</td>
+<td>string</td>
+<td>Present in datetime variables. Current resolution of data</td>
+</tr>
+<tr>
+<td>rollup_resolution</td>
+<td>string</td>
+<td>Present in datetime variables. Resolution used for rolled up summaries</td>
+</tr>
+<tr>
+<td>geodata</td>
+<td>URL</td>
+<td>Present only in variables that have geodata associated. Points to the catalog of geodata related to this variable.</td>
 </tr>
 </tbody></table>
 
@@ -2251,15 +2444,35 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <h4 id="patch-catalog">PATCH catalog</h4>
 
-<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, or &ldquo;discarded&rdquo; state of one or more variables. A successful request returns a 204 response. The attributes changed will be seen by all users with access to this dataset; i.e., names, descriptions, aliases, and discarded state are not merely attributes of your view of the data but of the datasets themselves.</p>
+<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, or &ldquo;discarded&rdquo; state of
+one or more variables. A successful request returns a 204 response. The
+attributes changed will be seen by all users with access to this dataset;
+i.e., names, descriptions, aliases, and discarded state are not merely
+attributes of your view of the data but of the datasets themselves.</p>
 
-<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset being modified, as shown in the &ldquo;permissions&rdquo; object in the dataset&rsquo;s catalog tuple. If you try to PATCH and are not authorized, you will receive a 403 response and no changes will be made.</p>
+<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset being
+modified, as shown in the &ldquo;permissions&rdquo; object in the dataset&rsquo;s catalog tuple.
+If you try to PATCH and are not authorized, you will receive a 403 response and
+ no changes will be made.</p>
 
-<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, and &ldquo;discarded&rdquo; cannot be modified here by PATCH. Attempting to modify other attributes, or including new attributes, will return a 400 response. Variable &ldquo;type&rdquo; can only be modified by the &ldquo;cast&rdquo; method, described below. The &ldquo;subvariables&rdquo; can be modified by PATCH on the variable entity. &ldquo;subvariables_catalog&rdquo; is a URL to a different variable catalog and is thus not editable, though you can navigate to its location and modify subvariable attributes there. A variable&rsquo;s &ldquo;id&rdquo; and its &ldquo;derived&rdquo; state are immutable.</p>
+<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;alias&rdquo;, and &ldquo;discarded&rdquo;
+ cannot be modified here by PATCH. Attempting to modify other attributes, or
+ including new attributes, will return a 400 response. Variable &ldquo;type&rdquo; can only
+ be modified by the &ldquo;cast&rdquo; method, described below. The &ldquo;subvariables&rdquo; can be
+ modified by PATCH on the variable entity. &ldquo;subvariables_catalog&rdquo; is a URL to
+  a different variable catalog and is thus not editable, though you can navigate
+   to its location and modify subvariable attributes there. A variable&rsquo;s &ldquo;id&rdquo;
+   and its &ldquo;derived&rdquo; state are immutable.</p>
 
-<p>When PATCHing, you may include only the keys in each tuple that are being modified, or you may send the complete tuple. As long as the keys that cannot be modified via PATCH here are not modified, the request will succeed.</p>
+<p>When PATCHing, you may include only the keys in each tuple that are being
+modified, or you may send the complete tuple. As long as the keys that cannot
+be modified via PATCH here are not modified, the request will succeed.</p>
 
-<p>Note that, because this catalog contains its entities (rather than collecting them), you cannot PATCH to add new variables, nor can you PATCH a null tuple to delete them. Attempting either will return a 400 response. Creating variables is allowed only by POST to the catalog, while deleting variables is accomplished via a DELETE on the variable entity.</p>
+<p>Note that, because this catalog contains its entities (rather than collecting
+them), you cannot PATCH to add new variables, nor can you PATCH a null tuple to
+delete them. Attempting either will return a 400 response. Creating variables is
+ allowed only by POST to the catalog, while deleting variables is accomplished
+ via a DELETE on the variable entity.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
@@ -2270,7 +2483,9 @@ modified via PATCH here are not modified, the request will succeed.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<p>PATCHing this payload on the above catalog will return a 204 status. A subsequent GET of the catalog returns the following response; note the change in line 24.</p>
+<p>PATCHing this payload on the above catalog will return a 204 status. A
+subsequent GET of the catalog returns the following response; note the change in
+line 24.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5ee0a0/variables/"</span><span class="p">,</span><span class="w">
@@ -2333,21 +2548,34 @@ modified via PATCH here are not modified, the request will succeed.</p>
 <li>If &ldquo;type&rdquo; is &ldquo;datetime&rdquo;: <strong>resolution</strong>: a string, such as &ldquo;Y&rdquo;, &ldquo;M&rdquo;, &ldquo;D&rdquo;, &ldquo;h&rdquo;, &ldquo;m&rdquo;, &ldquo;s&rdquo;, &ldquo;ms&rdquo;, that indicates the unit size of the datetime data.</li>
 </ul>
 
-<p>See Variable Definitions for more details and examples of valid attributes, and Feature Guide: Arrays for more information on the various cases for creating array variables.</p>
+<p>See Variable Definitions for more details and examples of valid attributes, and
+Feature Guide: Arrays for more information on the various cases for creating
+array variables.</p>
 
-<p>It is encouraged, but not required, to include an &ldquo;alias&rdquo; in the body. If omitted, one will be generated from the required &ldquo;name&rdquo;.</p>
+<p>It is encouraged, but not required, to include an &ldquo;alias&rdquo; in the body. If
+omitted, one will be generated from the required &ldquo;name&rdquo;.</p>
 
-<p>You may also include &ldquo;values&rdquo;, which will create the column of data corresponding to this variable definition. See <a href="#column-by-column">Importing Data: Column-by-column</a> for details and examples.</p>
+<p>You may also include &ldquo;values&rdquo;, which will create the column of data
+corresponding to this variable definition. See <a href="#column-by-column">Importing Data: Column-by-column</a> for details and examples.</p>
 
-<p>You may instead also include an &ldquo;expr&rdquo; to derive a variable as a function of other variables. In this case, &ldquo;type&rdquo; is not required because it depends on the output of the specified derivation function. For details and examples, see <a href="#deriving-variables">Deriving Variables</a>.</p>
+<p>You may instead also include an &ldquo;expr&rdquo; to derive a variable as a function of
+other variables. In this case, &ldquo;type&rdquo; is not required because it depends on the
+output of the specified derivation function. For details and examples, see
+<a href="#deriving-variables">Deriving Variables</a>.</p>
 
-<p>A 201 indicates success and includes the URL of the newly-created variable in the Location header.</p>
+<p>A 201 indicates success and includes the URL of the newly-created variable in
+the Location header.</p>
 
 <h4 id="private-variables-catalog">Private variables catalog</h4>
 
 <p><code class="prettyprint">/datasets/{id}/variables/private/{?relative,nosubvars}</code></p>
 
-<p><code class="prettyprint">GET</code> returns a Shoji Catalog of variables, as described above, containing those variables that are private to the authenticated user. You may <code class="prettyprint">PATCH</code> this catalog to edit names, aliases, descriptions, etc. of the private variables. <code class="prettyprint">POST</code>, however, is not supported at this endpoint. To create new private variables, <code class="prettyprint">POST</code> to the main variables catalog with a <code class="prettyprint">&quot;private&quot;: true</code> body attribute.</p>
+<p><code class="prettyprint">GET</code> returns a Shoji Catalog of variables, as described above, containing those
+ variables that are private to the authenticated user. You may <code class="prettyprint">PATCH</code> this
+ catalog to edit names, aliases, descriptions, etc. of the private variables.
+ <code class="prettyprint">POST</code>, however, is not supported at this endpoint. To create new private
+ variables, <code class="prettyprint">POST</code> to the main variables catalog with a <code class="prettyprint">&quot;private&quot;: true</code> body
+ attribute.</p>
 
 <h3 id="hierarchical-order">Hierarchical Order</h3>
 
@@ -2359,27 +2587,37 @@ modified via PATCH here are not modified, the request will succeed.</p>
 
 <h4 id="patch">PATCH</h4>
 
-<p>Will expect a Shoji Order representation containing a replacement or new grouped entities. This allows one to create new groups on the fly or overwrite existing groups with new &lsquo;entities&rsquo;.</p>
+<p>Will expect a Shoji Order representation containing a replacement or new grouped
+entities. This allows one to create new groups on the fly or overwrite existing
+groups with new &lsquo;entities&rsquo;.</p>
 
-<p>The match happens by each group name and will overwrite the values of each group with the received one.</p>
+<p>The match happens by each group name and will overwrite the values of each group
+ with the received one.</p>
 
-<p>After PATCH any variable not present in the order will always be appended to the root of the graph.</p>
+<p>After PATCH any variable not present in the order will always be appended to the
+ root of the graph.</p>
 
 <h4 id="put">PUT</h4>
 
-<p>Receives a Shoji Order representation with a completely new graph. Any previously existing group will be eliminated and any new groups will be added. This will overwrite the complete set of current groups.</p>
+<p>Receives a Shoji Order representation with a completely new graph. Any
+previously existing group will be eliminated and any new groups will be added.
+ This will overwrite the complete set of current groups.</p>
 
-<p>After PUT any variable not present on any of the groups will always be appended to the root of the graph.</p>
+<p>After PUT any variable not present on any of the groups will always be appended
+ to the root of the graph.</p>
 
 <h3 id="weights">Weights</h3>
 
 <p><code class="prettyprint">/datasets/{id}/variables/weights/</code></p>
 
-<p>GET a &ldquo;groups&rdquo; view with a single group named <code class="prettyprint">weight_variables</code> that contains the urls of the variables that have been designated as possible weight variables.</p>
+<p>GET a &ldquo;groups&rdquo; view with a single group named <code class="prettyprint">weight_variables</code> that contains
+the urls of the variables that have been designated as possible weight variables.</p>
 
-<p>PATCH the <code class="prettyprint">value</code> with a &ldquo;groups&rdquo; body. The URLs on the payload (that aren&rsquo;t weight variables already) will be appended to the existing list of weight variables.</p>
+<p>PATCH the <code class="prettyprint">value</code> with a &ldquo;groups&rdquo; body. The URLs on the payload (that aren&rsquo;t
+weight variables already) will be appended to the existing list of weight variables.</p>
 
-<p>PUT the <code class="prettyprint">value</code> with a &ldquo;groups&rdquo; view. The value will overwrite the current weight variables with the incoming ones. Use this to delete weight variables.</p>
+<p>PUT the <code class="prettyprint">value</code> with a &ldquo;groups&rdquo; view. The value will overwrite the current
+weight variables with the incoming ones. Use this to delete weight variables.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
     </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"weight_variables"</span><span class="p">,</span><span class="w">
@@ -2389,14 +2627,17 @@ modified via PATCH here are not modified, the request will succeed.</p>
 </span></code></pre>
 
 <aside class="warning">
-It is only possible to submit variables that belong to the main dataset. That is, variables from joined datasets cannot be set as weight.
+It is only possible to submit variables that belong to the main dataset. That
+is, variables from joined datasets cannot be set as weight.
 </aside>
 
 <h3 id="search">Search</h3>
 
 <p><code class="prettyprint">/datasets/{id}/variables/search/{?q}</code></p>
 
-<p>On GET will return a Crunch Order with the variables matching the <code class="prettyprint">q</code> token in the URL. The results will be under the &ldquo;Search Results&rdquo; group containing the urls for the matching variables.</p>
+<p>On GET will return a Crunch Order with the variables matching the <code class="prettyprint">q</code> token in
+the URL. The results will be under the &ldquo;Search Results&rdquo; group containing the
+urls for the matching variables.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/4e9a00/variables/search/?q=something"</span><span class="p">,</span><span class="w">
@@ -2548,7 +2789,8 @@ It is only possible to submit variables that belong to the main dataset. That is
 </tbody></table>
 
 <aside class="notice">
-For variables with categories, you can get the &ldquo;missing reasons&rdquo; from the category definitions. You don&rsquo;t need the &ldquo;missing_reasons&rdquo; body attribute.
+For variables with categories, you can get the &ldquo;missing reasons&rdquo; from the
+category definitions. You don&rsquo;t need the &ldquo;missing_reasons&rdquo; body attribute.
 </aside>
 
 <p>Format objects may contain:</p>
@@ -2605,9 +2847,12 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <h4 id="patch">PATCH</h4>
 
-<p>PATCH variable entities to edit their metadata. Send a Shoji Entity with a &ldquo;body&rdquo; member containing the attributes to modify. Omitted body attributes will be unchanged.</p>
+<p>PATCH variable entities to edit their metadata. Send a Shoji Entity with a
+&ldquo;body&rdquo; member containing the attributes to modify. Omitted body attributes will
+be unchanged.</p>
 
-<p>Successful requests return 204 status. Among the actions achievable by PATCHing variable entities:</p>
+<p>Successful requests return 204 status. Among the actions achievable by PATCHing
+variable entities:</p>
 
 <ul>
 <li>Editing category attributes and adding categories. Include all categories.</li>
@@ -2630,7 +2875,12 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <h4 id="delete">DELETE</h4>
 
-<p>Calling DELETE on this resource will delete the variable. On success, <code class="prettyprint">DELETE</code> returns 200 status with a Shoji View. When deleting array variables, this response value will contain the URLs of the (formerly sub-)variables, which are promoted to regular variables on <code class="prettyprint">DELETE</code> of the array. That is, deleting an array &ldquo;unbinds&rdquo; the subvariables, and to delete the array fully, one must then make a <code class="prettyprint">DELETE</code> request on each of the returned URLs.</p>
+<p>Calling DELETE on this resource will delete the variable. On success, <code class="prettyprint">DELETE</code>
+returns 200 status with a Shoji View. When deleting array variables, this
+response value will contain the URLs of the (formerly sub-)variables, which are
+promoted to regular variables on <code class="prettyprint">DELETE</code> of the array. That is, deleting an
+array &ldquo;unbinds&rdquo; the subvariables, and to delete the array fully, one must then
+make a <code class="prettyprint">DELETE</code> request on each of the returned URLs.</p>
 
 <p>For non-array variables, this View will be an empty array.</p>
 
@@ -2638,9 +2888,13 @@ For variables with categories, you can get the &ldquo;missing reasons&rdquo; fro
 
 <p><code class="prettyprint">/datasets/{id}/variables/{id}/summary/{?filter}</code></p>
 
-<p>A collection of summary information describing the variable. A successful GET returns an object containing various scalars and tabular results in various formats. The set of included members varies by variable type. Exclusions, filters, and weights may all alter the output.</p>
+<p>A collection of summary information describing the variable. A successful GET
+returns an object containing various scalars and tabular results in various
+formats. The set of included members varies by variable type. Exclusions,
+filters, and weights may all alter the output.</p>
 
-<p>For example, given a numeric variable with data [1, 2, 3, 4, 5, 4, {&ldquo;?&rdquo;: -1}, 3, 5, {&ldquo;?&rdquo;: -1}, 4, 3], a successful GET with no exclusions, filters, or weights returns:</p>
+<p>For example, given a numeric variable with data [1, 2, 3, 4, 5, 4, {&ldquo;?&rdquo;: -1}, 3,
+ 5, {&ldquo;?&rdquo;: -1}, 4, 3], a successful GET with no exclusions, filters, or weights returns:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"count"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w">
     </span><span class="nt">"valid_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
@@ -2807,29 +3061,48 @@ as well as basic summary statistics:</li>
 
 <h5 id="get">GET</h5>
 
-<p>This endpoint will return 404 for any variable that is not an array variable (Multiple response and Categorical variable).</p>
+<p>This endpoint will return 404 for any variable that is not an array variable
+(Multiple response and Categorical variable).</p>
 
-<p>For array variables, this endpoint will return a Shoji Catalog containing a variables catalog with tuples for the subvariables. The tuples will have the same shape as the main variables catalog.</p>
+<p>For array variables, this endpoint will return a Shoji Catalog containing a
+variables catalog with tuples for the subvariables. The tuples will have the
+same shape as the main variables catalog.</p>
 
 <h5 id="patch">PATCH</h5>
 
-<p>On PATCH, this endpoint allows modification to the variables attributes exposed on the tuples (name, description, alias, discarded).</p>
+<p>On PATCH, this endpoint allows modification to the variables attributes exposed
+ on the tuples (name, description, alias, discarded).</p>
 
-<p>It is possible to add new subvariables to the array variable in question. To do so include the URL of another variable (currently existing on the dataset) on the payload with an empty tuple and such variable will be converted into a subvariable and added at the end.</p>
+<p>It is possible to add new subvariables to the array variable in question. To do
+so include the URL of another variable (currently existing on the dataset) on
+the payload with an empty tuple and such variable will be converted into a
+subvariable and added at the end.</p>
 
 <h4 id="values">Values</h4>
 
 <p><code class="prettyprint">/datasets/{id}/variables/{id}/values/{?start,total,filter}</code></p>
 
-<p>A GET on this set of resources will return a JSON array of values from the variable&rsquo;s data. Numeric variables will return numbers, text variables will return strings, and categorical variables will return category names for valid categories and {&ldquo;?&rdquo;: code} missing markers for missing categories. The &ldquo;start&rdquo; and &ldquo;total&rdquo; parameters paginate the results. The &ldquo;filter&rdquo; is a Crunch filter expression.</p>
+<p>A GET on this set of resources will return a JSON array of values from the
+variable&rsquo;s data. Numeric variables will return numbers, text variables will
+return strings, and categorical variables will return category names for valid
+categories and {&ldquo;?&rdquo;: code} missing markers for missing categories. The &ldquo;start&rdquo;
+and &ldquo;total&rdquo; parameters paginate the results. The &ldquo;filter&rdquo; is a Crunch filter
+expression.</p>
 
 <h3 id="private-variables">Private Variables</h3>
 
 <p><code class="prettyprint">/datasets/{id}/variables/private/</code></p>
 
-<p>Private variables are variables that, instead of being shared with everyone, are viewable only by the user that created them. In Crunch, users with view-only permissions on a dataset can still make variables of their own–just as they can make private filters.</p>
+<p>Private variables are variables that, instead of being shared with everyone,
+are viewable only by the user that created them. In Crunch, users with view-only
+ permissions on a dataset can still make variables of their own–just as they
+ can make private filters.</p>
 
-<p>Private variables are not shown in the common variable catalog. Instead, they have their own Shoji Catalog of private variables belonging to the specified dataset for the authenticated user. Aside from this separate catalog, private variable entities and the catalog behave just as described above for public variables.</p>
+<p>Private variables are not shown in the common variable catalog. Instead, they
+have their own Shoji Catalog of private variables belonging to the specified
+dataset for the authenticated user. Aside from this separate catalog, private
+ variable entities and the catalog behave just as described above for public
+ variables.</p>
 
           <h2 id="filters">Filters</h2>
 
@@ -2903,16 +3176,24 @@ that will contain a Location header with the URL of the newly created filter.</p
 <h3 id="filtering-endpoints">Filtering endpoints</h3>
 
 <p>Some endpoints will support filtering, they will accept a <code class="prettyprint">filter</code> GET parameter
-that should be a JSON encoded object that can contain either the URL of a filter
-(available through the Filters catalog) or a filter expression.</p>
+that can be a JSON encoded object that can contain either the URL of a filter
+(available through the Filters catalog) or a filter expression or a filter URL.</p>
 
-<p>To filter using a filter URL, pass the following JSON object as the <code class="prettyprint">filter</code>
+<p>To filter using a filter URL using JSON pass in an object as the <code class="prettyprint">filter</code>
 parameter:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/filters/28ef72/"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=%7B%22filter%22%3A%22http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Ffilters%2F28ef72%2F%22%7D</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<p>It is also possible to send straight filter URLs without a JSON wrapping:</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Ffilters%2F28ef72%2F</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<p>Or multiple filters that will be ANDed together</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Ffilters%2F28ef72%2F&amp;filter=http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Ffilters%2F28ef72%2F</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
 <p>To filter using a filter expression, pass a Crunch filter expression as the
@@ -2928,7 +3209,68 @@ parameter:</p>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=%7B%22function%22%3A%22%3D%3D%22%2C%22args%22%3A%5B%7B%22variable%22%3A%22http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Fvariables%2Faae3c2%2F%22%7D%2C%7B%22value%22%3A1%7D%5D%7D</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
-          <h2 id="analyses">Analyses</h2>
+<p>Filter expressions can be combined with filter URLs to make reference to other filters, like so:</p>
+<pre class="highlight json"><code><span class="w">    </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"and"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/filters/28ef72/"</span><span class="w">
+            </span><span class="p">},</span><span class="w">
+           </span><span class="p">{</span><span class="w">
+                </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"=="</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                    </span><span class="p">{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/datasets/ac64ef/variables/aae3c2/"</span><span class="p">},</span><span class="w">
+                    </span><span class="p">{</span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w">
+                </span><span class="p">]</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">    
+</span></code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/datasets/id/summary/?filter=%7B%22function%22%3A+%22and%22%2C+%22args%22%3A+%5B%7B%22filter%22%3A+%22http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Ffilters%2F28ef72%2F%22%7D%2C+%7B%22function%22%3A+%22%3D%3D%22%2C+%22args%22%3A+%5B%7B%22variable%22%3A+%22http%3A%2F%2Fbeta.crunch.io%2Fapi%2Fdatasets%2Fac64ef%2Fvariables%2Faae3c2%2F%22%7D%2C+%7B%22value%22%3A+1%7D%5D%7D%5D%7D</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+          <h2 id="saving-analyses">Saving analyses</h2>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"query"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"dimensions"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+        </span><span class="nt">"measures"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"query_environment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"filter"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+            </span><span class="p">{</span><span class="nt">"filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;url&gt;"</span><span class="p">},</span><span class="w">
+            </span><span class="p">{</span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"expression"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"(Optional)"</span><span class="p">}</span><span class="w">
+        </span><span class="p">],</span><span class="w">
+        </span><span class="nt">"weight"</span><span class="p">:</span><span class="w"> </span><span class="s2">"url"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"display_settings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"decimalPlaces"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"percentageDirection"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"colPct"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"vizType"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"table"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"countsOrPercents"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"percent"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"uiView"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"expanded"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<blockquote>
+<p>Analysis queries are described in detail in the <a href="#multidimensional-analysis">feature guide</a>. <a href="#filters">Filters</a> may contain a mix of stored filters or expressions. Expressions may contain an optional <code class="prettyprint">name</code> which may be used to label results.</p>
+</blockquote>
+
+<p>An analysis &ndash; a table or graph with some specific combination of variables defining measures, rows, columns, and tabs; settings such as percentage direction and decimal places &ndash; can be saved to a <em>deck</em> which can then be exported, or the analysis can be reloaded in whole in the application or even exported as a standalone embeddable result.</p>
+
+<p>An analysis is defined by a <em>query</em>, <em>query environment</em>, and <em>display settings</em>. To save an analysis, <code class="prettyprint">POST</code> these to a deck (each user of each dataset has their own &ldquo;main deck&rdquo;).</p>
+
+<p>Display settings can be anything a client may need to reproduce the view of the data returned from the query. The settings the Crunch web client uses are shown here, but other clients are free to store other attributes as they see fit. Display settings should be objects with a <code class="prettyprint">value</code> member.</p>
 
           <h2 id="comparisons">Comparisons</h2>
 
@@ -3263,8 +3605,10 @@ parameter:</p>
 
 <p>A GET on this resource returns a Shoji Entity describing the batch, and a link to its Crunch Table (see next).</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"conflicts"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
     </span><span class="nt">"source_children"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
     </span><span class="nt">"target_children"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+
     </span><span class="nt">"source_columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">3500</span><span class="p">,</span><span class="w">
     </span><span class="nt">"source_rows"</span><span class="p">:</span><span class="w"> </span><span class="mi">235490</span><span class="p">,</span><span class="w">
     </span><span class="nt">"target_columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">3499</span><span class="p">,</span><span class="w">
@@ -3275,6 +3619,30 @@ parameter:</p>
     </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"appended"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
+
+<h4 id="the-conflicts-object">The conflicts object</h4>
+
+<p>Each batch has a &ldquo;conflicts&rdquo; member describing any unresolvable differences found between variables in the two datasets. On a successful append, this object will be empty; if the batch status is &ldquo;conflict&rdquo;, the object will contain conflict information keyed by id of the variable in the target dataset. The conflict data for each variable follows this shape:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;string&gt;"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;string&gt;"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;string&gt;"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[{}],</span><span class="w">
+    </span><span class="err">}</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"source_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;id of the matching variable in the source frame"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"source_metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name, etc"</span><span class="p">:</span><span class="w"> </span><span class="s2">"as above"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"conflicts"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
+        </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;string&gt;"</span><span class="p">,</span><span class="w">
+    </span><span class="err">}</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>Each conflict has four attributes: <code class="prettyprint">metadata</code> about the variable on the target dataset (unless it is a variable that only exists on the source dataset), <code class="prettyprint">source_id</code> and <code class="prettyprint">source_metadata</code>, which describe the corresponding variable in the source frame (if any), and a <code class="prettyprint">conflicts</code> member. The <code class="prettyprint">conflicts</code> member contains an array with a list of individual conflicts that indicate what situations were found during batch preparation. </p>
+
+<p>If there are conflicts in your batch, address the conflicting issues in your datasets, DELETE the batch entity from the failed append attempt, and POST a new one.</p>
 
 <h4 id="table">Table</h4>
 
