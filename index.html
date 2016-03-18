@@ -48,7 +48,7 @@
       <div class="content">
         <h1 id="introduction">Introduction</h1>
 
-<p>Crunch exposes a REST API for third parties, and indeed its own UI, to manage datasets. This API is also used by the <a href="https://github.com/Crunch-io/pycrunch">Python</a> and <a href="https://github.com/Crunch-io/rcrunch">R</a> libraries. This User Guide is for developers who are writing applications on top of the Crunch REST API, with or without those language bindings. It describes the existing interfaces for the current version and attempts to provide context and examples to guide development. </p>
+<p>Crunch exposes a REST API for third parties, and indeed its own UI, to manage datasets. This API is also used by the <a href="https://github.com/Crunch-io/pycrunch">Python</a> and <a href="https://github.com/Crunch-io/rcrunch">R</a> libraries. This User Guide is for developers who are writing applications on top of the Crunch REST API, with or without those language bindings. It describes the existing interfaces for the current version and attempts to provide context and examples to guide development.</p>
 
 <p>The documents are organized in three overlapping scopes: a <a href="#feature-guide">feature guide</a>, which provide higher-level vignettes that illustrate key features; an <a href="#endpoint-reference">endpoint reference</a>, which describes individual URIs in detail; and an <a href="#object-reference">object reference</a>, which defines the building blocks of the Crunch platform, such as values, columns, types, variables, and datasets.</p>
 
@@ -4291,6 +4291,363 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 <h4 id="get">GET</h4>
 
 <p>GET returns a Shoji Catalog of datasets that have been shared with this team. See <a href="#datasets">datasets</a> for details.</p>
+
+          <h2 id="projects">Projects</h2>
+
+<p>Projects are &hellip;.</p>
+
+<p>They live under /projects/ and will list the projects that the logged user
+is a member or owner of.</p>
+
+<h3 id="catalog">Catalog</h3>
+
+<p>The projects catalog will list all the projects the logged user is a member of.
+Here you can create new projects via POST</p>
+
+<h4 id="get">GET</h4>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/4643\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 1"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4643"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6c01"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h4 id="post">POST</h4>
+
+<p>New projects need a name (no uniqueness enforced) and will belong to the logged
+user, making it its initial member.</p>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/projects/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<p>Payload example:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My new project"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h3 id="entity">Entity</h3>
+
+<h4 id="get">GET</h4>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"catalogs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"datasets"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"members"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/icon\/"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Long description text"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="err">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h4 id="delete">DELETE</h4>
+
+<p>Deleting a project will <em>NOT</em> delete its datasets. It will change their 
+ownership to the logged user.</p>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/projects/abcd/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<h4 id="projects-order">Projects order</h4>
+
+<p>Returns the <code class="prettyprint">shoji:order</code> in which the projects should be displayed for
+ the user. This entity is independent for each user.</p>
+
+<p>As the user is added to more projects, these will be added at the end of the
+<code class="prettyprint">shoji:order</code>.</p>
+
+<h5 id="get">GET</h5>
+
+<p>Will return a <code class="prettyprint">shoji:order</code> containing a flat list of all the projects where
+the current user belongs to.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/order/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/projects/cc9161/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/projects/a598c7/"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="put">PUT</h5>
+
+<p>In order to change the order of the projects, the client will need to PUT the
+full payload back to the server.</p>
+
+<p>The graph attribute should contain all projects included, else it will return
+a 400 response.</p>
+
+<p>After a successful PUT request, the server will reply with a 204 response.</p>
+<pre class="highlight http"><code><span class="nf">PUT</span> <span class="nn">/projects/order/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/projects/cc9161/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/projects/a598c7/"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h4 id="members">Members</h4>
+
+<p>Use this endpoint to manage the users that have access to this project.</p>
+
+<h5 id="get">GET</h5>
+
+<p>Returns a catalog with all users that have access to this project in the 
+following format:</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/00002\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Jean-Luc Picard"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"captain@crunch.io"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/00005\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"William Riker"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"firstofficer@crunch.io"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="patch">PATCH</h5>
+
+<p>Use this method to add or remove members from the project. Only the project owner
+has this capabilities, else you will get a 403 response.</p>
+
+<p>To add a new user, PATCH a catalog keyed by the new user URL and an empty
+object for its value.</p>
+
+<p>To remove users, PATCH a catalog keyed by the user you want to remove and <code class="prettyprint">null</code>
+for its value.</p>
+
+<p>Note that you cannot remove the project owner from the project, you will
+get a 409 response.</p>
+
+<p>It is possible to perform many additions/removals in one request, the 
+following example adds users <code class="prettyprint">/users/001/</code> and deletes users <code class="prettyprint">/users/002/</code></p>
+<pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/001\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/002\/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h4 id="datasets">Datasets</h4>
+
+<p>Will list all the datasets that have this project as their owner.</p>
+
+<h5 id="get">GET</h5>
+
+<p>Will show the list of all datasets where this project is their owner, the 
+shape of the dataset tuple will be the same as in other dataset catalogs.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"orders"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://local.crunch.io:8080/api/projects/6c01/datasets/order/"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"owner_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"James T. Kirk"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The Voyage Home"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Stardate 8390"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"archived"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"change_permissions"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"add_users"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"change_weight"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"rows"</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">67</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cc9161"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/685722/"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2286"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"end_date"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1986-11-26T12:05:00"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"current_editor"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/ff9443/"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Leonard Nimoy"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"owner_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Spock"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The Wrath of Khan"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"archived"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"change_permissions"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"add_users"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"change_weight"</span><span class="p">:,</span><span class="w">
+            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"rows"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a598c7"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/af432c/"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2285-10-03"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"end_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2285-10-20"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1982-06-04T09:16:23.231045"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"current_editor"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"current_editor_name"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="patch">PATCH</h5>
+
+<p>Same as with members, this endpoint allows to add and remove datasets from the
+project.</p>
+
+<p>You can only add datasets that belong to you.</p>
+
+<p>When removing a dataset from a project, their ownership will change from the 
+project to you.</p>
+
+<p>To add datasets, include the dataset URL with an empty object in the PATCHed
+catalog.</p>
+
+<p>To remove datasets, include the dataset URL with <code class="prettyprint">null</code> in the PATCHed catalog.</p>
+
+<p>Modifications to the datasets will be reflected in the project&rsquo;s related 
+dataset order. </p>
+
+<p>You can perform multiple additions/removals in one request:</p>
+<pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h4 id="icon">Icon</h4>
+
+<p>The icon endpoint for a project is a ShojiView that allows to change the
+project&rsquo;s icon.</p>
+
+<h5 id="get">GET</h5>
+
+<p>On GET, it will return a <code class="prettyprint">shoji:view</code> with its value containing a url to the
+icon file or empty string in case there isn&rsquo;t an icon for this project yet.</p>
+
+<p>By default all new projects have an empty icon URL.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/icon\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="put">PUT</h5>
+
+<p>PUT to this endpoint to change a project&rsquo;s icon. The payload should have the
+ form of a standard multipart/form-data upload. The file&rsquo;s contents will be 
+ stored and made available under the project&rsquo;s url.</p>
+
+<p>Only the project&rsquo;s owner can change the project&rsquo;s icon.</p>
+
+<p>Valid image extensions: &lsquo;png&rsquo;, &#39;gif&rsquo;, &#39;jpg&rsquo;, &#39;jpeg&rsquo; - Others will 400</p>
+
+<h4 id="post">POST</h4>
+
+<p>Same as PUT</p>
+
+<h4 id="datasets-order">Datasets order</h4>
+
+<p>Contains the <code class="prettyprint">shoji:order</code> in which the datasets of this project are to be 
+ordered.</p>
+
+<p>This is endpoint available for all project members but can only be updated by 
+the project&rsquo;s owner.</p>
+
+<h5 id="get">GET</h5>
+
+<p>Will return the <code class="prettyprint">shoji:order</code> response containing the datasets that belong
+to the project.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/6c01/datasets/order/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="put">PUT</h5>
+
+<p>Allow to make modifications to the <code class="prettyprint">shoji:order</code> for the contained datasets.
+Only the project owner can make these changes.</p>
+
+<p>Trying to include an invalid dataset or an incomplete list will return a 
+400 response.</p>
+<pre class="highlight http"><code><span class="nf">PUT</span> <span class="nn">/projects/6c01/datasets/order/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">,</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"group"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
 
           <h1 id="object-reference">Object Reference</h1>
 
