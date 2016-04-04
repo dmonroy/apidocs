@@ -1806,15 +1806,35 @@ hide the <em>Don’t know</em>, and more compactly represent the result as just 
 
 <p><code class="prettyprint">PATCH /datasets/</code></p>
 
-<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;start_date&rdquo;, &ldquo;end_date&rdquo;, or &ldquo;archived&rdquo; state of one or more datasets. A successful request returns a 204 response. The attributes changed will be seen by all users with access to this dataset; i.e., names, descriptions, and archived state are not merely attributes of your view of the data but of the datasets themselves.</p>
+<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;start_date&rdquo;, &ldquo;end_date&rdquo;, or 
+&ldquo;archived&rdquo; state of one or more datasets. A successful request returns a 204 
+response. The attributes changed will be seen by all users with access to this 
+dataset; i.e., names, descriptions, and archived state are not merely attributes
+ of your view of the data but of the datasets themselves.</p>
 
-<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset(s) being modified, as shown in the &ldquo;permissions&rdquo; object in the catalog tuples. If you try to PATCH and are not authorized, you will receive a 403 response and no changes will be made.</p>
+<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset(s) 
+being modified, as shown in the &ldquo;permissions&rdquo; object in the catalog tuples. If 
+you try to PATCH and are not authorized, you will receive a 403 response and no 
+changes will be made.</p>
 
-<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, and &ldquo;archived&rdquo; cannot be modified here by PATCH. Attempting to modify other attributes, or including new attributes, will return a 400 response. Changing permissions is accomplished by PATCH on the permissions catalog, and changing the owner is a PATCH on the dataset entity. The &ldquo;owner_name&rdquo; and &ldquo;current_editor_name&rdquo; attributes are modifiable, assuming authorization, by PATCH on the associated user entity. Dataset &ldquo;size&rdquo; is a cached property of the data, changing only if the number of rows or columns in the dataset change. Dataset &ldquo;id&rdquo; and &ldquo;creation_time&rdquo; are immutable.</p>
+<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, and &ldquo;archived&rdquo; cannot be 
+modified here by PATCH. Attempting to modify other attributes, or including new 
+attributes, will return a 400 response. Changing permissions is accomplished by 
+PATCH on the permissions catalog, and changing the owner is a PATCH on the 
+dataset entity. The &ldquo;owner_name&rdquo; and &ldquo;current_editor_name&rdquo; attributes are 
+modifiable, assuming authorization, by PATCH on the associated user entity. 
+Dataset &ldquo;size&rdquo; is a cached property of the data, changing only if the number of 
+rows or columns in the dataset change. Dataset &ldquo;id&rdquo; and &ldquo;creation_time&rdquo; are 
+immutable.</p>
 
-<p>When PATCHing, you may include only the keys in each tuple that are being modified, or you may send the complete tuple. As long as the keys that cannot be modified via PATCH here are not modified, the request will succeed.</p>
+<p>When PATCHing, you may include only the keys in each tuple that are being 
+modified, or you may send the complete tuple. As long as the keys that cannot 
+be modified via PATCH here are not modified, the request will succeed.</p>
 
-<p>Note that, unlike other Shoji Catalog resources, you cannot PATCH to add new datasets, nor can you PATCH a null tuple to delete them. Attempting either will return a 400 response. Creating datasets is allowed only by POST to the catalog, while deleting datasets is accomplished via a DELETE on the dataset entity.</p>
+<p>Note that, unlike other Shoji Catalog resources, you cannot PATCH to add new 
+datasets, nor can you PATCH a null tuple to delete them. Attempting either will 
+return a 400 response. Creating datasets is allowed only by POST to the catalog,
+ while deleting datasets is accomplished via a DELETE on the dataset entity.</p>
 
 <h4 id="post">POST</h4>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
@@ -2017,6 +2037,19 @@ state are not merely attributes of your view of the data but of the datasets the
 <p>When PATCHing, you may include only the keys that are being
 modified, or you may send the complete entity. As long as the keys that cannot be
 modified via PATCH here are not modified, the request will succeed.</p>
+
+<h5 id="changing-dataset-ownership">Changing dataset ownership</h5>
+
+<p>If you are the current editor of a dataset you can change its owner by PATCHing
+the <code class="prettyprint">owner</code> attribute witht he URL of the new owner.</p>
+
+<p>Only Users, Teams or Projects can be set as owners of a dataset.</p>
+
+<ul>
+<li>Users: New owner needs to be advanced users to be owner of a dataset.</li>
+<li>Teams: Authenticated user needs to be a member of the team.</li>
+<li>Projects: Authenticated user needs to have edit permissions on the project. </li>
+</ul>
 
 <h4 id="delete">DELETE</h4>
 
@@ -2706,6 +2739,11 @@ urls for the matching variables.</p>
 <td>If true, the Variable is only visible to the owner and is only included in the private variables catalog, not the common catalog.</td>
 </tr>
 <tr>
+<td>owner</td>
+<td>url</td>
+<td>If the variable is private it will point to the url of its owner. Null for non private variables.</td>
+</tr>
+<tr>
 <td>derived</td>
 <td>boolean</td>
 <td>Whether the variable is a function of another; default: false</td>
@@ -3272,6 +3310,26 @@ parameter:</p>
 
 <p>Display settings can be anything a client may need to reproduce the view of the data returned from the query. The settings the Crunch web client uses are shown here, but other clients are free to store other attributes as they see fit. Display settings should be objects with a <code class="prettyprint">value</code> member.</p>
 
+          <h2 id="tab-books">Tab books</h2>
+
+<p>The <code class="prettyprint">tabbook</code> view of a multitable will generate an excel (.xlsx) workbook containing each variable in the dataset crosstabbed with a given multitable. </p>
+
+<p>A request to `datasets/{id}/multitables/{id}/tabbook/&rsquo; will generate a download location to which the exporter will write this file when it is done computing (it may take some time for large datasets). Clients should note the download url, monitor progress, and when complete, GET the download location. </p>
+
+<h4 id="get">GET</h4>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/datasets/{id}/multitables/{id}/tabbook/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/datasets/{id}/multitables/{id}/tabbook/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"started"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://s3-url/filename.xlsx"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/progress/:{id}/"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
           <h2 id="comparisons">Comparisons</h2>
 
 <h3 id="entity">Entity</h3>
@@ -3716,7 +3774,7 @@ parameter:</p>
 
 <p>Variables in joined datasets may then be used in analyses as if they were part of the principal dataset, simply by using their URI in this join&rsquo;s variables catalog (see below). The joined dataset includes one row for each row in the principal dataset, by taking the key in the principal and looking up the corresponding key and row in the subordinate dataset. Rows in the principal which have no corresponding row in the subordinate are filled with the &ldquo;No Data&rdquo; missing value.</p>
 
-<p>In order to create or alter a new join, the logged user will need to have reading access to the right dataset otherwise the server will respond with a 400 error.</p>
+<p>In order to create or alter a new join, the authenticated user will need to have reading access to the right dataset otherwise the server will respond with a 400 error.</p>
 
 <p>The variable url sent for the left key must be a valid url for the current dataset. It is not allowed to use a different dataset as a left table.</p>
 
@@ -3921,6 +3979,30 @@ parameter:</p>
 <aside class="notice">
     If you share with a new user and don&rsquo;t include `&ldquo;send_notifications&rdquo;: true`, they won&rsquo;t receive an email inviting them to set a password for their new Crunch account. That&rsquo;s okay, though: they can always go to the web application and click &ldquo;Forgot password&rdquo; to send a new password reset token. 
 </aside>
+
+          <h2 id="progress">Progress</h2>
+
+<p>Progress resources provide information about the current state of a long-running server process in Crunch. Some requests at certain endpoints may return 202 status and include a Location header pointing to a Progress resource, at which one can monitor the progress of the request that was accepted and not yet completed (i.e. 202 status).</p>
+
+<h4 id="get">GET</h4>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/progress/{id}/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https:/beta.crunch.io/api/progress/{id}/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="s2">"22.5"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"exported 2 variables"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"dataset_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{id}"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p><code class="prettyprint">GET</code> on a Progress view returns a Shoji View containing information about the status of the indicated process. The &ldquo;progress&rdquo; attribute contains a value between 0.0 and 100.0, stringified. If the <code class="prettyprint">id</code> from the request URL does not exist, <code class="prettyprint">GET</code> will nevertheless return 200 status and indicate <code class="prettyprint">&quot;progress&quot;: &quot;100&quot;</code>.</p>
+
+<p>Optionally, the View will provide a message regarding current status.</p>
+
+<p>You must be authenticated to <code class="prettyprint">GET</code> this resource.</p>
 
           <h2 id="users">Users</h2>
 
@@ -4296,12 +4378,12 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
 <p>Projects are &hellip;.</p>
 
-<p>They live under /projects/ and will list the projects that the logged user
+<p>They live under /projects/ and will list the projects that the authenticated user
 is a member or owner of.</p>
 
 <h3 id="catalog">Catalog</h3>
 
-<p>The projects catalog will list all the projects the logged user is a member of.
+<p>The projects catalog will list all the projects the authenticated user is a member of.
 Here you can create new projects via POST</p>
 
 <h4 id="get">GET</h4>
@@ -4319,16 +4401,51 @@ Here you can create new projects via POST</p>
     </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6c01"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+      </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Description of project 2"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>name</td>
+<td>string</td>
+<td></td>
+<td>Required when creating the project</td>
+</tr>
+<tr>
+<td>description</td>
+<td>string</td>
+<td>&ldquo;&rdquo;</td>
+<td>Longer description pf tje [rpkect</td>
+</tr>
+<tr>
+<td>id</td>
+<td>string</td>
+<td>autogenerated</td>
+<td>The project&rsquo;s id</td>
+</tr>
+<tr>
+<td>icon</td>
+<td>url</td>
+<td>&ldquo;&rdquo;</td>
+<td>Url for the icon file for the project. Empty string if not set</td>
+</tr>
+</tbody></table>
+
 <h4 id="post">POST</h4>
 
-<p>New projects need a name (no uniqueness enforced) and will belong to the logged
-user, making it its initial member.</p>
+<p>New projects need a name (no uniqueness enforced) and will make the authenticated
+user its initial member and editor.</p>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/projects/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
@@ -4364,10 +4481,50 @@ user, making it its initial member.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
+<table><thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>name</td>
+<td>string</td>
+<td></td>
+<td>Required when creating the project</td>
+</tr>
+<tr>
+<td>description</td>
+<td>string</td>
+<td>&ldquo;&rdquo;</td>
+<td>Longer description pf tje [rpkect</td>
+</tr>
+<tr>
+<td>id</td>
+<td>string</td>
+<td>autogenerated</td>
+<td>The project&rsquo;s id</td>
+</tr>
+<tr>
+<td>icon</td>
+<td>url</td>
+<td>&ldquo;&rdquo;</td>
+<td>Url for the icon file for the project. Empty string if not set</td>
+</tr>
+</tbody></table>
+
+<p>Note about the <code class="prettyprint">icon</code> attribute that points to the actual image file where the
+configured icon is. This url does not point to the <code class="prettyprint">views.icon</code> Shoji view url.</p>
+
+<p>The <code class="prettyprint">views.icon</code> Shoji view endpoint is used to PUT the icon as a file upload
+for this project.</p>
+
 <h4 id="delete">DELETE</h4>
 
 <p>Deleting a project will <em>NOT</em> delete its datasets. It will change their 
-ownership to the logged user.</p>
+ownership to the authenticated user.</p>
 <pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/projects/abcd/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
@@ -4436,7 +4593,11 @@ following format:</p>
     </span><span class="p">},</span><span class="w">
     </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/00005\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"William Riker"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"firstofficer@crunch.io"</span><span class="w">
+      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"firstofficer@crunch.io"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"edit: false,
+        "</span><span class="err">view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+      </span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
@@ -4444,8 +4605,8 @@ following format:</p>
 
 <h5 id="patch">PATCH</h5>
 
-<p>Use this method to add or remove members from the project. Only the project owner
-has this capabilities, else you will get a 403 response.</p>
+<p>Use this method to add or remove members from the project. Only project editors 
+have this capabilities, else you will get a 403 response.</p>
 
 <p>To add a new user, PATCH a catalog keyed by the new user URL and an empty
 object for its value.</p>
@@ -4453,8 +4614,8 @@ object for its value.</p>
 <p>To remove users, PATCH a catalog keyed by the user you want to remove and <code class="prettyprint">null</code>
 for its value.</p>
 
-<p>Note that you cannot remove the project owner from the project, you will
-get a 409 response.</p>
+<p>Note that you cannot remove yourself from the project, you will
+get a 400 response.</p>
 
 <p>It is possible to perform many additions/removals in one request, the 
 following example adds users <code class="prettyprint">/users/001/</code> and deletes users <code class="prettyprint">/users/002/</code></p>
@@ -4473,6 +4634,14 @@ following example adds users <code class="prettyprint">/users/001/</code> and de
 <h4 id="datasets">Datasets</h4>
 
 <p>Will list all the datasets that have this project as their owner.</p>
+
+<h5 id="adding-datasets-to-projects">Adding datasets to projects</h5>
+
+<p>The way to add a dataset to a project is by changing the dataset&rsquo;s owner to the
+project you want.</p>
+
+<p>You must have edit and be current editor on any given dataset to change its
+owner and you must also have edit permissions on the target project.</p>
 
 <h5 id="get">GET</h5>
 
@@ -4539,37 +4708,6 @@ shape of the dataset tuple will be the same as in other dataset catalogs.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h5 id="patch">PATCH</h5>
-
-<p>Same as with members, this endpoint allows to add and remove datasets from the
-project.</p>
-
-<p>You can only add datasets that belong to you.</p>
-
-<p>When removing a dataset from a project, their ownership will change from the 
-project to you.</p>
-
-<p>To add datasets, include the dataset URL with an empty object in the PATCHed
-catalog.</p>
-
-<p>To remove datasets, include the dataset URL with <code class="prettyprint">null</code> in the PATCHed catalog.</p>
-
-<p>Modifications to the datasets will be reflected in the project&rsquo;s related 
-dataset order. </p>
-
-<p>You can perform multiple additions/removals in one request:</p>
-<pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-</code></pre>
-<pre class="highlight json"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-    </span><span class="nt">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-
 <h4 id="icon">Icon</h4>
 
 <p>The icon endpoint for a project is a ShojiView that allows to change the
@@ -4596,7 +4734,7 @@ icon file or empty string in case there isn&rsquo;t an icon for this project yet
  form of a standard multipart/form-data upload. The file&rsquo;s contents will be 
  stored and made available under the project&rsquo;s url.</p>
 
-<p>Only the project&rsquo;s owner can change the project&rsquo;s icon.</p>
+<p>Only the project&rsquo;s editors can change the project&rsquo;s icon.</p>
 
 <p>Valid image extensions: &lsquo;png&rsquo;, &#39;gif&rsquo;, &#39;jpg&rsquo;, &#39;jpeg&rsquo; - Others will 400</p>
 
@@ -4610,7 +4748,7 @@ icon file or empty string in case there isn&rsquo;t an icon for this project yet
 ordered.</p>
 
 <p>This is endpoint available for all project members but can only be updated by 
-the project&rsquo;s owner.</p>
+the project&rsquo;s editors.</p>
 
 <h5 id="get">GET</h5>
 
@@ -4631,7 +4769,7 @@ to the project.</p>
 <h5 id="put">PUT</h5>
 
 <p>Allow to make modifications to the <code class="prettyprint">shoji:order</code> for the contained datasets.
-Only the project owner can make these changes.</p>
+Only the project&rsquo;s editors can make these changes.</p>
 
 <p>Trying to include an invalid dataset or an incomplete list will return a 
 400 response.</p>
