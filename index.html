@@ -4392,6 +4392,9 @@ Here you can create new projects via POST</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"generate_icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects/generate_icon\/"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/4643\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 1"</span><span class="p">,</span><span class="w">
@@ -4452,8 +4455,38 @@ user its initial member and editor.</p>
 <p>Payload example:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My new project"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My new project"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"icon_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://..."</span><span class="p">,</span><span class="w">
+    </span><span class="err">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h5 id="creating-a-project-with-an-icon">Creating a project with an icon</h5>
+
+<p>To create one with a starting icon you can POST an <code class="prettyprint">icon_url</code> attribute 
+indicating a url where to fetch that icon from (has to be a publicly accessible url).</p>
+
+<p>If the server cannot read that URL the request will return a 409 error.</p>
+
+<p>If not provided the API will pick an available icon from the icons catalog.</p>
+
+<p>On success a copy of the file will be stored as the icon to be serve</p>
+
+<h4 id="default-icon">Default icon</h4>
+
+<p>The API can provide default icons to be used in new projects. Performing a GET
+request will return a Shoji:catalog with a list of available icons for the client
+to pick.</p>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/icons/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/icons\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -4476,6 +4509,7 @@ user its initial member and editor.</p>
     </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Long description text"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"user_icon"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
     </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
   </span><span class="err">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
@@ -4499,7 +4533,7 @@ user its initial member and editor.</p>
 <td>description</td>
 <td>string</td>
 <td>&ldquo;&rdquo;</td>
-<td>Longer description pf tje [rpkect</td>
+<td>Longer description of the project</td>
 </tr>
 <tr>
 <td>id</td>
@@ -4512,6 +4546,12 @@ user its initial member and editor.</p>
 <td>url</td>
 <td>&ldquo;&rdquo;</td>
 <td>Url for the icon file for the project. Empty string if not set</td>
+</tr>
+<tr>
+<td>user_icon</td>
+<td>boolean</td>
+<td>autogenerated</td>
+<td>Will indicate false if the icon used on creation is from the provided catalog</td>
 </tr>
 </tbody></table>
 
