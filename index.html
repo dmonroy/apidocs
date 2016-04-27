@@ -2435,7 +2435,7 @@ Filtering Endpoints</p>
 
 <h3 id="catalog">Catalog</h3>
 
-<p><code class="prettyprint">/datasets/{id}/variables/{?relative,nosubvars}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/{?relative}</code></p>
 
 <p>A Shoji Catalog of variables.</p>
 
@@ -2444,6 +2444,10 @@ Filtering Endpoints</p>
 <p>When authenticated and authorized to view the given dataset, GET returns 200
 status with a Shoji Catalog of variables in the dataset. If authorization is
 lacking, response will instead be 404.</p>
+
+<p>Array subvariables are not included in the index of this catalog, although
+entities may be present at <code class="prettyprint">variables/{id}/</code>. Their metadata are instead
+accessible in each array variable&rsquo;s &ldquo;subvariables_catalog&rdquo;.</p>
 
 <p>Private variables are not included in the index of this catalog, although
 entities may be present at <code class="prettyprint">variables/{id}/</code>. See Private Variables for an
@@ -2539,14 +2543,9 @@ index of those.</p>
 <td>string</td>
 <td>If &ldquo;on&rdquo;, all URLs in the &ldquo;index&rdquo; will be relative to the catalog&rsquo;s &ldquo;self&rdquo;</td>
 </tr>
-<tr>
-<td>nosubvars</td>
-<td>integer</td>
-<td>If 1, array subvariables will not be included directly in the variables catalog. Their metadata are instead accessible in each array variable&rsquo;s &ldquo;subvariables_catalog&rdquo;.</td>
-</tr>
 </tbody></table>
 
-<p>With both flags enabled, the variable catalog looks something like this:</p>
+<p>With the relative flag enabled, the variable catalog looks something like this:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5ee0a0/variables/"</span><span class="p">,</span><span class="w">
@@ -2722,7 +2721,7 @@ the Location header.</p>
 
 <h4 id="private-variables-catalog">Private variables catalog</h4>
 
-<p><code class="prettyprint">/datasets/{id}/variables/private/{?relative,nosubvars}</code></p>
+<p><code class="prettyprint">/datasets/{id}/variables/private/{?relative}</code></p>
 
 <p><code class="prettyprint">GET</code> returns a Shoji Catalog of variables, as described above, containing those
  variables that are private to the authenticated user. You may <code class="prettyprint">PATCH</code> this
@@ -3224,8 +3223,8 @@ as well as basic summary statistics:</li>
 (Multiple response and Categorical variable).</p>
 
 <p>For array variables, this endpoint will return a Shoji Catalog containing a
-variables catalog with tuples for the subvariables. The tuples will have the
-same shape as the main variables catalog.</p>
+tuples for the subvariables. The tuples will have the same shape as the main
+variables catalog.</p>
 
 <h5 id="patch">PATCH</h5>
 
