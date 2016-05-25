@@ -173,7 +173,10 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 
 <h3 id="metadata-document-csv">Metadata document + CSV</h3>
 
-<p>This approach may be most natural for importing data from databases that store data by rows. You can dump or export your database to Crunch&rsquo;s JSON metadata format, plus a CSV of data, and upload those to Crunch, without requiring much back-and-forth with the API.</p>
+<p>This approach may be most natural for importing data from databases that store 
+data by rows. You can dump or export your database to Crunch&rsquo;s JSON metadata 
+format, plus a CSV of data, and upload those to Crunch, without requiring much
+ back-and-forth with the API.</p>
 
 <h4 id="1-create-a-dataset-entity-with-variable-definitions">1. Create a Dataset entity with variable definitions</h4>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
@@ -191,7 +194,7 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 <span class="s">                "educ": {"name": "Education", "alias": "educ", "type": "categorical", "categories": [...], ...},</span>
 <span class="s">                "color": {"name": "Favorite color", "alias": "color", "type": "text", ...}</span>
 <span class="s">            },</span>
-<span class="s">            "order": [{"group": "my group", "entities": ["educ", ...]}, ...]</span>
+<span class="s">            "order": ["educ", {'my group": "color"}]</span>
 <span class="s">        },</span>
 <span class="s">    }</span>
 <span class="s">}</span>
@@ -200,11 +203,32 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 <span class="na">Location</span><span class="p">:</span> <span class="s">/datasets/{dataset_id}/</span>
 </code></pre>
 
-<p>POST a Dataset Entity to the datasets catalog, and in the &ldquo;body&rdquo;, include a Crunch Table object with variable definitions and order.</p>
+<p>POST a Dataset Entity to the datasets catalog, and in the &ldquo;body&rdquo;, include a 
+Crunch Table object with variable definitions and order.</p>
 
-<p>The &ldquo;metadata&rdquo; member in the table is an object containing all variable definitions, keyed by variable alias. See the Object Reference: Variable Definitions discussion for specific requirements for defining variables of various types, as well as the example below.</p>
+<p>The &ldquo;metadata&rdquo; member in the table is an object containing all variable 
+definitions, keyed by variable alias. See the Object Reference: Variable 
+Definitions discussion for specific requirements for defining variables of 
+various types, as well as the example below.</p>
 
-<p>The &ldquo;order&rdquo; member is a Shoji Order object specifying the order, potentially hierarchically nested, of the variables in the dataset. The example below illustrates how this can be used. Shoji is JSON, which means the &ldquo;metadata&rdquo; object is explicitly unordered. If you wish the variables to have an order, you must supply an order object rather than relying on any order of the &ldquo;metadata&rdquo; object.</p>
+<p>The &ldquo;order&rdquo; member is a Shoji Order object specifying the order, potentially 
+hierarchically nested, of the variables in the dataset. The example below 
+illustrates how this can be used. Shoji is JSON, which means the &ldquo;metadata&rdquo;
+object is explicitly unordered. If you wish the variables to have an order, 
+you must supply an order object rather than relying on any order of the 
+&ldquo;metadata&rdquo; object.</p>
+
+<h5 id="validation-rules">Validation rules</h5>
+
+<p>All variables mentioned in the metadata must contain a valid variable definition
+with a matching alias.</p>
+
+<p>Array variables definitions should contain valid subvariable members.</p>
+
+<p>Any attribute that contains a <code class="prettyprint">null</code> value will be ignored and get the attribute&rsquo;s
+default value instead.</p>
+
+<p>An empty <code class="prettyprint">order</code> for the dataset will be handled as if no order was passed in.</p>
 
 <h4 id="2-add-row-data">2. Add row data</h4>
 
@@ -409,25 +433,25 @@ Replace &ldquo;fake.user@example.com&rdquo; and &ldquo;password&rdquo; with your
 <p>When you attach a Source to an existing Dataset, the system attempts to match up the new data with the old. If the source&rsquo;s schema can be automatically aligned with the target Dataset, the new rows from the Batch are appended. When things go wrong, however, the Batch can be inspected to see what conflicted with the target (or vice-versa, in some cases!).</p>
 
 <p>GET the new Batch:</p>
-<pre class="highlight http"><code><span class="err">    </span><span class="nf">GET</span> <span class="nn">/api/datasets/{dataset_id}/batches/{batch_id}/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
-<span class="s">    ...</span>
-<span class="s">    --------</span>
-<span class="s">    200 OK</span>
-<span class="s">    Content-Type: application/shoji</span>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/datasets/{dataset_id}/batches/{batch_id}/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="s">...</span>
+<span class="s">--------</span>
+<span class="s">200 OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/shoji</span>
 
-    {
-        "element": "shoji:entity",
-        "body": {
-            "conflicts": {
-              "cdbd11/": {
-                "metadata": {}
-                "conflicts": [{
-                  "message": "Types do not match and cannot be converted",
-                }]
-              }
-            }
+{
+    "element": "shoji:entity",
+    "body": {
+        "conflicts": {
+          "cdbd11/": {
+            "metadata": {}
+            "conflicts": [{
+              "message": "Types do not match and cannot be converted",
+            }]
+          }
         }
     }
+}
 </code></pre>
 
 <p>If any variable conflicts, it will possess one or more &ldquo;conflicts&rdquo; members. For example, if the new variable &ldquo;cdbd11&rdquo; had a different type that could not be converted compared to the existing variable &ldquo;cdbd11&rdquo;, the Batch resource would contain the above message.  Only unresolvable conflicts will be shown; if a variable is not reported in the conflicts object, it appended cleanly.</p>
@@ -1583,16 +1607,16 @@ hide the <em>Don’t know</em>, and more compactly represent the result as just 
 
           <h2 id="datasets">Datasets</h2>
 
-<p>Datasets are the primary containers of statistical data in Crunch. Datasets 
-contain a collection of <a href="#variables">variables</a>, with which analyses can be 
-composed, saved, and exported. These analyses may include filters, which users 
+<p>Datasets are the primary containers of statistical data in Crunch. Datasets
+contain a collection of <a href="#variables">variables</a>, with which analyses can be
+composed, saved, and exported. These analyses may include filters, which users
 can define and persist. Users can also share datasets with each other.</p>
 
-<p>Datasets are comprised of one or more batches of data uploaded to Crunch, and 
-additional batches can be appended to datasets. Similarly, variables from other 
+<p>Datasets are comprised of one or more batches of data uploaded to Crunch, and
+additional batches can be appended to datasets. Similarly, variables from other
 datasets can be joined onto a dataset.</p>
 
-<p>As with other objects in Crunch, references to the set of dataset entities are 
+<p>As with other objects in Crunch, references to the set of dataset entities are
 exposed in a catalog. This catalog can be organized and ordered.</p>
 
 <h3 id="catalog">Catalog</h3>
@@ -1635,6 +1659,7 @@ exposed in a catalog. This catalog can be organized and ordered.</p>
                 </span><span class="nt">"rows"</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span><span class="p">,</span><span class="w">
                 </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="mi">67</span><span class="w">
             </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"is_published"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
             </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cc9161"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/685722/"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2286"</span><span class="p">,</span><span class="w">
@@ -1660,6 +1685,7 @@ exposed in a catalog. This catalog can be organized and ordered.</p>
                 </span><span class="nt">"rows"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
                 </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
             </span><span class="p">},</span><span class="w">
+            </span><span class="nt">"is_published"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
             </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a598c7"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"owner_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/users/af432c/"</span><span class="p">,</span><span class="w">
             </span><span class="nt">"start_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2285-10-03"</span><span class="p">,</span><span class="w">
@@ -1675,8 +1701,8 @@ exposed in a catalog. This catalog can be organized and ordered.</p>
 
 <p><code class="prettyprint">GET /datasets/</code></p>
 
-<p>When authenticated, GET returns 200 status with a Shoji Catalog of datasets to 
-which the authenticated user has access. Catalog tuples contain the following 
+<p>When authenticated, GET returns 200 status with a Shoji Catalog of datasets to
+which the authenticated user has access. Catalog tuples contain the following
 attributes:</p>
 
 <table><thead>
@@ -1771,15 +1797,30 @@ attributes:</p>
 <td></td>
 <td>That user&rsquo;s name, for display</td>
 </tr>
+<tr>
+<td>is_published</td>
+<td>boolean</td>
+<td>true</td>
+<td>Indicates if the dataset is published to viewers or not</td>
+</tr>
 </tbody></table>
 
 <aside class="notice">
-    A user may have access to a dataset because someone has shared it directly 
-    with him, or because someone has shared it with a team of which he is a 
-    member. If a user has access to a dataset from different sources, be it by 
-    multiple teams or by direct sharing, the final permissions they have on the 
+    A user may have access to a dataset because someone has shared it directly
+    with him, or because someone has shared it with a team of which he is a
+    member. If a user has access to a dataset from different sources, be it by
+    multiple teams or by direct sharing, the final permissions they have on the
     dataset will be the maximum of all the permissions granted.
 </aside>
+
+<h4 id="drafts">Drafts</h4>
+
+<p>A dataset marked as <code class="prettyprint">is_published: false</code> can only be accessed by dataset editors. 
+They will still be available on the catalog for all shared users but API clients
+should know to display these to the appropriate users.</p>
+
+<p>The <code class="prettyprint">is_published</code> flag of a dataset can be changed by editors from the catalog or 
+directly on the dataset entity.</p>
 
 <h4 id="patch">PATCH</h4>
 <pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/api/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
@@ -1830,35 +1871,47 @@ attributes:</p>
 
 <p><code class="prettyprint">PATCH /datasets/</code></p>
 
-<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;start_date&rdquo;, &ldquo;end_date&rdquo;, or 
-&ldquo;archived&rdquo; state of one or more datasets. A successful request returns a 204 
-response. The attributes changed will be seen by all users with access to this 
+<p>Use PATCH to edit the &ldquo;name&rdquo;, &ldquo;description&rdquo;, &ldquo;start_date&rdquo;, &ldquo;end_date&rdquo;, or
+&ldquo;archived&rdquo; state of one or more datasets. A successful request returns a 204
+response. The attributes changed will be seen by all users with access to this
 dataset; i.e., names, descriptions, and archived state are not merely attributes
  of your view of the data but of the datasets themselves.</p>
 
-<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset(s) 
-being modified, as shown in the &ldquo;permissions&rdquo; object in the catalog tuples. If 
-you try to PATCH and are not authorized, you will receive a 403 response and no 
+<p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on the dataset(s)
+being modified, as shown in the &ldquo;permissions&rdquo; object in the catalog tuples. If
+you try to PATCH and are not authorized, you will receive a 403 response and no
 changes will be made.</p>
 
-<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, and &ldquo;archived&rdquo; cannot be 
-modified here by PATCH. Attempting to modify other attributes, or including new 
-attributes, will return a 400 response. Changing permissions is accomplished by 
-PATCH on the permissions catalog, and changing the owner is a PATCH on the 
-dataset entity. The &ldquo;owner_name&rdquo; and &ldquo;current_editor_name&rdquo; attributes are 
-modifiable, assuming authorization, by PATCH on the associated user entity. 
-Dataset &ldquo;size&rdquo; is a cached property of the data, changing only if the number of 
-rows or columns in the dataset change. Dataset &ldquo;id&rdquo;, &ldquo;modification_time&rdquo; 
+<p>The tuple attributes other than &ldquo;name&rdquo;, &ldquo;description&rdquo;, and &ldquo;archived&rdquo; cannot be
+modified here by PATCH. Attempting to modify other attributes, or including new
+attributes, will return a 400 response. Changing permissions is accomplished by
+PATCH on the permissions catalog, and changing the owner is a PATCH on the
+dataset entity. The &ldquo;owner_name&rdquo; and &ldquo;current_editor_name&rdquo; attributes are
+modifiable, assuming authorization, by PATCH on the associated user entity.
+Dataset &ldquo;size&rdquo; is a cached property of the data, changing only if the number of
+rows or columns in the dataset change. Dataset &ldquo;id&rdquo;, &ldquo;modification_time&rdquo;
 and &ldquo;creation_time&rdquo; are immutable/system generated.</p>
 
-<p>When PATCHing, you may include only the keys in each tuple that are being 
-modified, or you may send the complete tuple. As long as the keys that cannot 
+<p>When PATCHing, you may include only the keys in each tuple that are being
+modified, or you may send the complete tuple. As long as the keys that cannot
 be modified via PATCH here are not modified, the request will succeed.</p>
 
-<p>Note that, unlike other Shoji Catalog resources, you cannot PATCH to add new 
-datasets, nor can you PATCH a null tuple to delete them. Attempting either will 
+<p>Note that, unlike other Shoji Catalog resources, you cannot PATCH to add new
+datasets, nor can you PATCH a null tuple to delete them. Attempting either will
 return a 400 response. Creating datasets is allowed only by POST to the catalog,
  while deleting datasets is accomplished via a DELETE on the dataset entity.</p>
+
+<h5 id="changing-ownership">Changing ownership</h5>
+
+<p>Any changes to the ownership of a dataset need to be done by the current editor.</p>
+
+<p>Only the dataset owner can change the ownership to another user. This can be done
+by PATCH request with the new owners&rsquo; email of API URL. The new owner must have
+advanced permissions on Crunch.</p>
+
+<p>Other editors of the dataset can change the ownership of a dataset only to a
+Project as long as they andthe current owner of the dataset are both editors
+on such project.</p>
 
 <h4 id="post">POST</h4>
 <pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
@@ -1898,11 +1951,11 @@ return a 400 response. Creating datasets is allowed only by POST to the catalog,
 
 <p><code class="prettyprint">POST /datasets/</code></p>
 
-<p>POST a JSON object to create a new Dataset; a 201 indicates success, and the 
+<p>POST a JSON object to create a new Dataset; a 201 indicates success, and the
 returned Location header refers to the new Dataset resource.</p>
 
-<p>The body must contain a &ldquo;name&rdquo;, and additional parameters &ldquo;description&rdquo; and 
-&ldquo;archived&rdquo; are allowed. You can also include a Crunch Table in a &ldquo;table&rdquo; key, 
+<p>The body must contain a &ldquo;name&rdquo;, and additional parameters &ldquo;description&rdquo; and
+&ldquo;archived&rdquo; are allowed. You can also include a Crunch Table in a &ldquo;table&rdquo; key,
 as discussed in the Feature Guide. Sending any other attribute will return a 400 response.</p>
 
 <h3 id="other-catalogs">Other catalogs</h3>
@@ -1913,15 +1966,15 @@ as discussed in the Feature Guide. Sending any other attribute will return a 400
 
 <p><code class="prettyprint">/teams/{team_id}/datasets/</code></p>
 
-<p>A Shoji Catalog of datasets that have been shared with this team. These datasets 
+<p>A Shoji Catalog of datasets that have been shared with this team. These datasets
 are not included in the primary dataset catalog. See <a href="#teams">teams</a> for more.</p>
 
 <h4 id="filter-datasets-by-name">Filter datasets by name</h4>
 
 <p><code class="prettyprint">/datasets/by_name/{dataset_name}/</code></p>
 
-<p>The <code class="prettyprint">by_name</code> catalog returns (on GET) a Shoji Catalog that is a subset of 
-<code class="prettyprint">/datasets/</code> where the dataset name matches the &ldquo;dataset_name&rdquo; value. Matches 
+<p>The <code class="prettyprint">by_name</code> catalog returns (on GET) a Shoji Catalog that is a subset of
+<code class="prettyprint">/datasets/</code> where the dataset name matches the &ldquo;dataset_name&rdquo; value. Matches
 are case sensitive.</p>
 
 <p>Verbs other than GET are not supported on this subcatalog. PATCH and POST at
@@ -1934,7 +1987,7 @@ are presented.</p>
 
 <p>This endpoint returns a <code class="prettyprint">shoji:order</code>. Like all shoji orders, it may not contain
 all available datasets. The catalog should always be the authoritative source
-of available datasets. </p>
+of available datasets.</p>
 
 <p>Any dataset not present on the order graph should be considered to be at the
 bottom of the root list in arbitrary order.</p>
@@ -2095,9 +2148,9 @@ the API will return a 400 response.</p>
 
 <p><code class="prettyprint">PATCH /datasets/{dataset_id}/</code></p>
 
-<p>See above about PATCHing the dataset catalog for all attributes duplicated on 
-the entity and the catalog. You may PATCH those attributes on the entity, but you 
-are encouraged to PATCH the catalog instead. The two attributes appearing on the 
+<p>See above about PATCHing the dataset catalog for all attributes duplicated on
+the entity and the catalog. You may PATCH those attributes on the entity, but you
+are encouraged to PATCH the catalog instead. The two attributes appearing on the
 entity and not the catalog, &ldquo;notes&rdquo; and &ldquo;weight&rdquo;, are modifiable by PATCH here.</p>
 
 <p>A successful PATCH request returns a 204 response. The attributes changed will be seen
@@ -2107,8 +2160,8 @@ state are not merely attributes of your view of the data but of the datasets the
 <p>Authorization is required: you must have &ldquo;edit&rdquo; privileges on this dataset.
  If you try to PATCH and are not authorized, you will receive a 403 response
  and no changes will be made. If you have edit permissions but are not the
- current editor of this dataset, PATCH requests of anything other than 
- &ldquo;current_editor&rdquo; will respond with 409 status. You will need first to PATCH to 
+ current editor of this dataset, PATCH requests of anything other than
+ &ldquo;current_editor&rdquo; will respond with 409 status. You will need first to PATCH to
  make yourself
   the current editor and then proceed to make the desired changes.</p>
 
@@ -2126,14 +2179,14 @@ the <code class="prettyprint">owner</code> attribute witht he URL of the new own
 <ul>
 <li>Users: New owner needs to be advanced users to be owner of a dataset.</li>
 <li>Teams: Authenticated user needs to be a member of the team.</li>
-<li>Projects: Authenticated user needs to have edit permissions on the project. </li>
+<li>Projects: Authenticated user needs to have edit permissions on the project.</li>
 </ul>
 
 <h4 id="delete">DELETE</h4>
 
 <p><code class="prettyprint">DELETE /datasets/{dataset_id}/</code></p>
 
-<p>With sufficient authorization, a successful DELETE request removes the dataset 
+<p>With sufficient authorization, a successful DELETE request removes the dataset
 from the Crunch system and responds with 204 status.</p>
 
 <h4 id="views">Views</h4>
@@ -2155,14 +2208,14 @@ from the Crunch system and responds with 204 status.</p>
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"spss"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/spss/"</span><span class="w">
-        </span><span class="s2">"csv"</span><span class="err">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/csv/"</span><span class="w">
+        </span><span class="nt">"spss"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/spss/"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"csv"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/export/csv/"</span><span class="w">
     </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
 <p>Accessing any of the export URLs will return a <code class="prettyprint">shoji:view</code> with an attribute
-<code class="prettyprint">url</code> pointing to the location of the exported file to be downloaded. </p>
+<code class="prettyprint">url</code> pointing to the location of the exported file to be downloaded.</p>
 
 <p>Following rules apply for all formats:</p>
 
@@ -2170,7 +2223,7 @@ from the Crunch system and responds with 204 status.</p>
 <li>All exporting happens synchronously.</li>
 <li>If the dataset does not have any columns, the server will return a 409 response</li>
 <li>Hidden/discarded variables are not exported.</li>
-<li>Onnly exclusion filter will be applied. </li>
+<li>Onnly exclusion filter will be applied.</li>
 <li>User applied filters are not applied.</li>
 <li>Personal(private) variables are not exported.</li>
 </ul>
@@ -2183,7 +2236,7 @@ by SPSS.</p>
 
 <h6 id="csv">CSV</h6>
 
-<p>Will only export base non personal variables in the same flat order as organized 
+<p>Will only export base non personal variables in the same flat order as organized
 in the API.</p>
 
 <p>Categorical variables will be exported with their name instead of their value.</p>
@@ -2207,14 +2260,14 @@ in the API.</p>
 </tbody></table>
 
 <p>GET returns a Shoji View with summary information about this dataset containing
- its number of rows (weighted and unweighted, with and without your applied 
- filters), as well as the number of variables and columns. The column count 
- will differ from the variable count when derived and array variables are 
+ its number of rows (weighted and unweighted, with and without your applied
+ filters), as well as the number of variables and columns. The column count
+ will differ from the variable count when derived and array variables are
  present&ndash;these variable types don&rsquo;t necessarily have their own columns of d
- ata behind them. The column count is useful for estimating load time and 
+ ata behind them. The column count is useful for estimating load time and
  file size when exporting.</p>
 
-<p>If a <code class="prettyprint">filter</code> is included, the &ldquo;filtered&rdquo; counts will be with respect to that 
+<p>If a <code class="prettyprint">filter</code> is included, the &ldquo;filtered&rdquo; counts will be with respect to that
 expression. If omitted, your applied filters will be used.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
@@ -2246,16 +2299,264 @@ expression. If omitted, your applied filters will be used.</p>
 
 <p>Exclusion filters allow you to drop rows of data without permanently deleting them.</p>
 
-<p>GET on this resource returns a Shoji Entity with a filter &ldquo;expression&rdquo; attribute 
+<p>GET on this resource returns a Shoji Entity with a filter &ldquo;expression&rdquo; attribute
 in its body. Rows that match the filter expression will be excluded from all views of the data.</p>
 
 <p>PATCH the &ldquo;expression&rdquo; attribute to modify. An empty &ldquo;expression&rdquo; object, like
- <code class="prettyprint">{&quot;body&quot;: {&quot;expression&quot;: {}}}</code>, is equivalent to &ldquo;no exclusion&rdquo;, i.e. no rows 
+ <code class="prettyprint">{&quot;body&quot;: {&quot;expression&quot;: {}}}</code>, is equivalent to &ldquo;no exclusion&rdquo;, i.e. no rows
  are dropped.</p>
 
 <h5 id="stream">Stream</h5>
 
-<h5 id="main-deck">Main deck</h5>
+<h5 id="decks">Decks</h5>
+
+<p><code class="prettyprint">/datasets/{id}/decks/</code></p>
+
+<p>Decks allow you to store <a href="#saving-analyses">saved analyses</a> as slides on them
+for exporting or future reference.</p>
+
+<p>Decks are personal per dataset and each dataset gets one by default but it is
+possible to create more as necessary by POSTing to the decks catalog. They
+only need a name.</p>
+
+<h6 id="get">GET</h6>
+
+<p>A GET request on the catalog endpoint will return all the decks available for
+this dataset for the authenticated user.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/decks/4fa25/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my new deck"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1986-11-26T12:05:00"</span><span class="p">,</span><span class="w">
+        </span><span class="err">}</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/decks/2b53e/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Default deck"</span><span class="p">,</span><span class="w">
+          </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1987-10-15T11:45:00"</span><span class="p">,</span><span class="w">
+        </span><span class="err">}</span><span class="p">,</span><span class="w">
+    </span><span class="err">}</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/order/"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre>
+
+<h6 id="post">POST</h6>
+
+<p>POST will create a new decks for this dataset. It only needs to have
+identifiable name.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my new deck"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">201</span> <span class="ne">Created</span>
+<span class="na">Location</span><span class="p">:</span> <span class="s">https://beta.crunch.io/api/datasets/223fd4/decks/2b3c5e/</span>
+
+</code></pre>
+
+<h6 id="deck-entity">Deck entity</h6>
+
+<p><code class="prettyprint">/datasets/{id}/decks/{id}/</code></p>
+
+<h6 id="get"># GET</h6>
+
+<p>You can GET on the deck entity to see all its attributes:</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/223fd4/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Presentation deck"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"223fd4"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1987-10-15T11:45:00"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Explanation about the deck"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h6 id="patch"># PATCH</h6>
+
+<p>In order to change the name or description of a deck you can PATCH a shoji:entity to it. The server will return a 204 response.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/223fd4/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Presentation deck"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"223fd4"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"creation_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1987-10-15T11:45:00"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Explanation about the deck"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">204</span> <span class="ne">No Content</span>
+</code></pre>
+
+<h6 id="decks-order">Decks order</h6>
+
+<p><code class="prettyprint">/datasets/{id}/decks/order/</code></p>
+
+<p>The Deck order allows to the user to customize the order in which they will be
+displayed by an API client.</p>
+
+<p>The deck order will always contain all existing decks.</p>
+
+<h6 id="get"># GET</h6>
+
+<p>Will return a (Shoji Order)[#shoji-order] payload.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/order/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/1/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/2/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/3/"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre>
+
+<h6 id="patch"># PATCH</h6>
+
+<p>It is necessary to do a PATCH request to change the order of the decks. On success the server will return a 204 response.</p>
+
+<p>If the payload contains only a subset of the existing decks. The unmentioned decks will be always appended at the bottom of the top level graph in arbitrary order.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/order/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/1/"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/decks/3/"</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>Including invalid URLs or URLs to decks that are not present in the catalog will return a 400 response from the server.</p>
+
+<h5 id="preferences">Preferences</h5>
+
+<p><code class="prettyprint">/datasets/{id}/preferences/</code></p>
+
+<p>The dataset preferences provide API clients with a key/value store for settings
+or customizations each would need for each user.</p>
+
+<p>By default all dataset preferences start out as an empty object where clients can
+PATCH the keys each deems necessary.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/223fd4/preferences/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<p>To delete keys from the preferences the value needs to be patched with <code class="prettyprint">null</code>.</p>
+
+<p>There is no order associated with the saved preferences. Clients should assume
+they are in arbitrary order.</p>
+
+<h5 id="primary-key">Primary key</h5>
+
+<p><code class="prettyprint">/datasets/{dataset_id}/pk/</code></p>
+
+<h6 id="url-parameters">URL Parameters</h6>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>dataset_id</td>
+<td>The id of the dataset</td>
+</tr>
+</tbody></table>
+
+<p>Setting a primary key on a dataset causes updates (particularly streamed
+updates) mentioning existing rows to be updated instead of new rows being
+inserted.  A primary key can only be set on a variable that is type &ldquo;numeric&rdquo; or &ldquo;text&rdquo; and that has no duplicate or missing values,
+and it can only be set after that variable has been added to the dataset.</p>
+
+<h6 id="get">GET</h6>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/datasets/{dataset_id}/pk/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
+
+--------
+200 OK
+Content-Type:application/json;charset=utf-8
+
+{
+    "element": "shoji:entity",
+    "body": {
+        "pk": ["https://beta.crunch.io/api/datasets/{dataset_id}/variables/000001/"],
+    }
+}
+</code></pre>
+<pre class="highlight shell"><code></code></pre>
+<pre class="highlight r"><code></code></pre>
+<pre class="highlight python"><code><span class="o">&gt;&gt;&gt;</span> <span class="c"># "ds" is dataset via pycrunch</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">pk</span>
+<span class="p">[</span><span class="s">'https://beta.crunch.io/api/datasets/{dataset_id}/variables/000001/'</span><span class="p">]</span>
+</code></pre>
+
+<p><code class="prettyprint">GET /datasets/{dataset_id}/pk/</code></p>
+
+<p>GET on this resource returns a Shoji Entity.  It contains one body key: <code class="prettyprint">pk</code>,
+which is an array. The &ldquo;pk&rdquo; member indicates the URLs of the variables
+in the dataset which comprise the primary key.  If there is no primary key for
+this dataset, the <code class="prettyprint">pk</code> value will be <code class="prettyprint">[]</code>.</p>
+
+<h6 id="post">POST</h6>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/datasets/{dataset_id}/pk/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+<span class="na">Content-Length</span><span class="p">:</span> <span class="s">15</span>
+
+<span class="p">{</span><span class="nt">"pk"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://beta.crunch.io/api/datasets/{dataset_id}/variables/000001/"</span><span class="p">]}</span><span class="w">
+
+</span><span class="err">--------</span><span class="w">
+</span><span class="mi">204</span><span class="w"> </span><span class="err">No</span><span class="w"> </span><span class="err">Content</span><span class="w">
+</span></code></pre>
+<pre class="highlight python"><code><span class="o">&gt;&gt;&gt;</span> <span class="c"># "ds" is dataset via pycrunch</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">post</span><span class="p">({</span><span class="s">'pk'</span><span class="p">:[</span><span class="s">'https://beta.crunch.io/api/datasets/{dataset_id}/variables/000001/'</span><span class="p">]})</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">pk</span>
+<span class="p">[</span><span class="s">'000001'</span><span class="p">]</span>
+</code></pre>
+
+<p><code class="prettyprint">POST /datasets/{dataset_id}/pk/</code></p>
+
+<p>When POSTing, set the body to a JSON object containing the key &ldquo;pk&rdquo; to modify
+the primary key. The &ldquo;pk&rdquo; key should be a list containing zero or more variable URLs.
+The variables referenced must be either text or numeric type
+and must have no duplicate or missing values.  Setting pk to <code class="prettyprint">[]</code> is
+equivalent to deleting the primary key for a dataset.  </p>
+
+<aside class="notice">
+    We currently support only a single primary key variable, so the POST payload
+    array should be of length zero or one.
+</aside>
+
+<h6 id="delete">DELETE</h6>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/api/datasets/{dataset_id}/pk/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">beta.crunch.io</span>
+
+--------
+204 No Content
+</code></pre>
+<pre class="highlight shell"><code></code></pre>
+<pre class="highlight r"><code></code></pre>
+<pre class="highlight python"><code><span class="o">&gt;&gt;&gt;</span> <span class="c"># "ds" is dataset via pycrunch</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ds</span><span class="o">.</span><span class="n">pk</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">pk</span>
+<span class="p">[]</span>
+</code></pre>
+
+<p><code class="prettyprint">DELETE /datasets/{dataset_id}/pk/</code></p>
+
+<p>DELETE the &ldquo;pk&rdquo; resource to delete the primary key for this dataset.  Upon
+success, this method returns no body and a 204 response code.</p>
 
 <h4 id="catalogs">Catalogs</h4>
 
@@ -2278,8 +2579,6 @@ in its body. Rows that match the filter expression will be excluded from all vie
 <h5 id="comparisons">Comparisons</h5>
 
 <h5 id="forks">Forks</h5>
-
-<h5 id="decks">Decks</h5>
 
 <h5 id="permissions">Permissions</h5>
 
@@ -3432,21 +3731,39 @@ parameter:</p>
 
           <h2 id="tab-books">Tab books</h2>
 
-<p>The <code class="prettyprint">tabbook</code> view of a multitable will generate an excel (.xlsx) workbook containing each variable in the dataset crosstabbed with a given multitable. </p>
+<p>The <code class="prettyprint">tabbook</code> view of a multitable will generate an excel (.xlsx) workbook 
+containing each variable in the dataset crosstabbed with a given multitable. </p>
 
-<p>A request to `datasets/{id}/multitables/{id}/tabbook/&rsquo; will generate a download location to which the exporter will write this file when it is done computing (it may take some time for large datasets). Clients should note the download url, monitor progress, and when complete, GET the download location. </p>
+<p>A POST request to <code class="prettyprint">/datasets/{id}/multitables/{id}/tabbook/</code> will generate a download 
+location to which the exporter will write this file when it is done computing 
+(it may take some time for large datasets). Clients should note the download url, 
+monitor progress, and when complete, GET the download location.</p>
 
-<h4 id="get">GET</h4>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/api/datasets/{id}/multitables/{id}/tabbook/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<p>The server will return a 202 response indicating that the export job started with
+a Location header indicating where the final exported file will be available.</p>
+
+<p>The response&rsquo;s body will contain the URL for the progress url where to query
+the state of the export job.</p>
+
+<p>Requesting the same job, if still in progress, will return the same 202 response 
+indicating the original progress to check. If the export is finished, the server
+will 302 redirect to the destination for download.</p>
+
+<p>If there have been changes on the dataset attributes, a new tabbook will be
+generated regardless of the status of any other pending exports.</p>
+
+<h4 id="post">POST</h4>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/api/datasets/a598c7/multitables/45fd58/tabbook/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+
+<hr>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">202</span> <span class="ne">Accepted</span>
+<span class="na">Location</span><span class="p">:</span> <span class="s">https://s3-url/filename.xlsx</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/datasets/{id}/multitables/{id}/tabbook/"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"started"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://s3-url/filename.xlsx"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/progress/:{id}/"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
+    </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/a598c7/multitables/{id}/tabbook/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/progress/5be83a/"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -3991,12 +4308,10 @@ parameter:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"https://beta.crunch.io/api/users/42/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"dataset_permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="err">...</span><span class="w">
+            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
         </span><span class="err">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="err">...,</span><span class="w">
     </span><span class="nt">"send_notification"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
     </span><span class="nt">"dataset_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/dataset/1"</span><span class="w">
  </span><span class="p">}</span><span class="w">
@@ -4018,9 +4333,8 @@ parameter:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"/users/id/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"dataset_permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="err">...</span><span class="w">
+            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
         </span><span class="err">}</span><span class="p">,</span><span class="w">
         </span><span class="nt">"profile"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="nt">"weight"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> 
@@ -4028,7 +4342,6 @@ parameter:</p>
 
         </span><span class="p">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="err">...</span><span class="w">
 </span><span class="err">}</span><span class="w">
 </span></code></pre>
 
@@ -4048,7 +4361,6 @@ parameter:</p>
 <p>To revoke users&rsquo; access to this dataset (aka &ldquo;unshare&rdquo; with them), PATCH a null tuple for their user URLs:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"/users/id/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-    </span><span class="err">...</span><span class="w">
 </span><span class="err">}</span><span class="w">
 </span></code></pre>
 
@@ -4070,21 +4382,17 @@ parameter:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"somebody@email.com"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"dataset_permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="err">bool</span><span class="p">,</span><span class="w">
-            </span><span class="err">...</span><span class="w">
-        </span><span class="err">}</span><span class="p">,</span><span class="w">
-        </span><span class="err">/*</span><span class="w">
+            </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
         </span><span class="nt">"profile"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
             </span><span class="nt">"weight"</span><span class="p">:,</span><span class="w"> 
             </span><span class="nt">"applied_filters"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-            </span><span class="err">...</span><span class="w">
         </span><span class="err">}</span><span class="w">
-        </span><span class="err">*/</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"send_notifications"</span><span class="err">,</span><span class="w"> </span><span class="err">true,</span><span class="w">
+    </span><span class="nt">"send_notifications"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
     </span><span class="nt">"url_base"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/password/change/${token}/"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"dataset_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/dataset/1"</span><span class="w">
+    </span><span class="nt">"dataset_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/dataset/1/"</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -4496,7 +4804,8 @@ id_provider (optional, and only if id_method == &lsquo;oauth&rsquo;)</p>
 
           <h2 id="projects">Projects</h2>
 
-<p>Projects are &hellip;.</p>
+<p>Projects represent groups of users that share a common set of datasets. Any user
+can belong to none or many projects.</p>
 
 <p>They live under /projects/ and will list the projects that the authenticated user
 is a member or owner of.</p>
@@ -4511,17 +4820,17 @@ Here you can create new projects via POST</p>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"generate_icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects/generate_icon\/"</span><span class="w">
+    </span><span class="nt">"generate_icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/generate_icon/"</span><span class="w">
   </span><span class="p">},</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/4643\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/projects/4643/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 1"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4643"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/projects/6c01/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6c01"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
@@ -4576,8 +4885,8 @@ user its initial member and editor.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My new project"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"icon_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://..."</span><span class="p">,</span><span class="w">
-    </span><span class="err">}</span><span class="w">
+        </span><span class="nt">"icon_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://cdn.sample.com/project-icon.png"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -4588,24 +4897,26 @@ indicating a url where to fetch that icon from (has to be a publicly accessible 
 
 <p>If the server cannot read that URL the request will return a 409 error.</p>
 
-<p>If not provided the API will pick an available icon from the icons catalog.</p>
-
 <p>On success a copy of the file will be stored as the icon to be serve</p>
+
+<p>If the <code class="prettyprint">icon_url</code> attribute is not provided the API will pick an available icon 
+from the icons catalog.</p>
 
 <h4 id="default-icon">Default icon</h4>
 
 <p>The API can provide default icons to be used in new projects. Performing a GET
 request will return a Shoji:catalog with a list of available icons for the client
 to pick.</p>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/icons/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/icons/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/icons\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/icons/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-    </span><span class="nt">"http://....png"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/icons/01/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/icons/02/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/icons/03/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/icons/04/"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
@@ -4613,25 +4924,25 @@ to pick.</p>
 <h3 id="entity">Entity</h3>
 
 <h4 id="get">GET</h4>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/6c01/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:entity"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"catalogs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"datasets"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"members"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="w">
+    </span><span class="nt">"datasets"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"members"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/members/"</span><span class="w">
   </span><span class="p">},</span><span class="w">
   </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/icon\/"</span><span class="w">
+    </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/icon/"</span><span class="w">
   </span><span class="p">},</span><span class="w">
   </span><span class="nt">"body"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Long description text"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
     </span><span class="nt">"user_icon"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-  </span><span class="err">}</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+  </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
@@ -4684,8 +4995,8 @@ for this project.</p>
 <h4 id="delete">DELETE</h4>
 
 <p>Deleting a project will <em>NOT</em> delete its datasets. It will change their 
-ownership to the authenticated user.</p>
-<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/projects/abcd/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+ownership to the authenticated user. Only project editors can delete a project.</p>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/projects/6c01/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
 <h4 id="projects-order">Projects order</h4>
@@ -4704,7 +5015,7 @@ the current user belongs to.</p>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/order/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/projects/cc9161/"</span><span class="p">,</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/projects/a598c7/"</span><span class="w">
@@ -4725,7 +5036,7 @@ a 400 response.</p>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/order/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/projects/cc9161/"</span><span class="p">,</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/projects/a598c7/"</span><span class="w">
@@ -4737,31 +5048,63 @@ a 400 response.</p>
 
 <p>Use this endpoint to manage the users that have access to this project.</p>
 
+<h5 id="members-permissions">Members permissions</h5>
+
+<p>Members of a project can be wither viewers or editors. By default all members
+will be viewers and a selected group of them (at least one) will be editor.</p>
+
+<p>These permissions are available on the members catalog under the <code class="prettyprint">permissions</code> 
+attribute on each member&rsquo;s tuple.</p>
+
+<p>The possible permissions are:</p>
+
+<ul>
+<li>edit</li>
+<li>view</li>
+</ul>
+
+<p>That can have boolean values. Those with <code class="prettyprint">edit: true</code> are considered project 
+editors.</p>
+
+<p>Project editors have edit privileges on all datasets as well as permissions to
+make changes on the project itself such as changing its name, icon, members 
+management or change members&rsquo; permissions.</p>
+
 <h5 id="get">GET</h5>
 
-<p>Returns a catalog with all users that have access to this project in the 
-following format:</p>
+<p>Returns a catalog with all users that have access to this project and their 
+project permissions in the following format:</p>
 <pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/members/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/00002\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/users/00002/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Jean-Luc Picard"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"captain@crunch.io"</span><span class="w">
+      </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"captain@crunch.io"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+      </span><span class="p">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/00005\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/users/00005/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"William Riker"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"firstofficer@crunch.io"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"edit: false,
-        "</span><span class="err">view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"view"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
+
+<p>The catalog will be indexed by each user&rsquo;s entity URL and its tuple will contain
+basic information (name and email) as well as the permissions each user has
+on the given project.</p>
+
+<p>All project members have read access to this resource.</p>
 
 <h5 id="patch">PATCH</h5>
 
@@ -4769,7 +5112,8 @@ following format:</p>
 have this capabilities, else you will get a 403 response.</p>
 
 <p>To add a new user, PATCH a catalog keyed by the new user URL and an empty
-object for its value.</p>
+object for its value or a permissions tuple to set specific permissions 
+(only <code class="prettyprint">edit</code> allowed at this point).</p>
 
 <p>To remove users, PATCH a catalog keyed by the user you want to remove and <code class="prettyprint">null</code>
 for its value.</p>
@@ -4779,17 +5123,55 @@ get a 400 response.</p>
 
 <p>It is possible to perform many additions/removals in one request, the 
 following example adds users <code class="prettyprint">/users/001/</code> and deletes users <code class="prettyprint">/users/002/</code></p>
+
+<p>It is allowed to invite/add users to the project by email address. If the email
+is registered on the system the user will be invited to the project. If the email
+is not part of Crunch.io a new user invitation will be sent to that email with
+instructions to set up their account. They will be automatically part of this
+project only.</p>
+
+<p>Attempting to remove users also allows to do so by email. In the case that the
+email does not exist, the server will return a 400 response.</p>
 <pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/projects/abcd/members/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/members\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/members/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/001\/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-    </span><span class="nt">"http:\/\/local.crunch.io:8080\/api\/users\/002\/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/users/001/"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/users/002/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"edit"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nt">"http://beta.crunch.io/api/users/003/"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"user@email.com"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="nt">"send_notification"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"url_base"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/password/change/${token}/"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
+
+<h6 id="sending-notifications">Sending notifications</h6>
+
+<p>The users invited to a project can be both existing Crunch.io users or new
+users that don&rsquo;t have a user account associated with the email.</p>
+
+<p>If desired, the API can send automated email notifications to the involved users
+indicating that they now belong to the project.</p>
+
+<p>It is necessary to add the <code class="prettyprint">send_notification</code> boolean key on the index PATCHed
+to command the API to send these emails. Else, no notification will be sent.</p>
+
+<p>When sending notifications, it is necessary for the client to include a 
+<code class="prettyprint">url_base</code> key as well that includes a string template that should point to a
+client location where the password resetting should happen for brand new users.</p>
+
+<p>The server will replace the <code class="prettyprint">${token}</code> part of the string with the generated
+token and will be included on the notification email as a link for the invited 
+user to configure their account in order to use the app.</p>
+
+<p>This behavior is the same as described for <a href="#inviting-new-users">inviting new users when sharing a dataset</a></p>
 
 <h4 id="datasets">Datasets</h4>
 
@@ -4798,22 +5180,31 @@ following example adds users <code class="prettyprint">/users/001/</code> and de
 <h5 id="adding-datasets-to-projects">Adding datasets to projects</h5>
 
 <p>The way to add a dataset to a project is by changing the dataset&rsquo;s owner to the
-project you want.</p>
+id of the project you want to take ownership.</p>
 
 <p>You must have edit and be current editor on any given dataset to change its
 owner and you must also have edit permissions on the target project.</p>
+
+<h5 id="patch-to-dataset-entity">PATCH to dataset entity</h5>
+
+<p>Send a PATCH request to the dataset entity that you want to make part of the
+project.</p>
+<pre class="highlight http"><code><span class="nf">PATCH</span> <span class="nn">/datasets/cc9161/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="nt">"owner"</span><span class="p">:</span><span class="s2">"https://beta.crunch.io/api/projects/abcd/"</span><span class="p">}</span><span class="w">
+</span></code></pre>
 
 <h5 id="get">GET</h5>
 
 <p>Will show the list of all datasets where this project is their owner, the 
 shape of the dataset tuple will be the same as in other dataset catalogs.</p>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/6c01/datasets/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"orders"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://local.crunch.io:8080/api/projects/6c01/datasets/order/"</span><span class="w">
+    </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/order/"</span><span class="w">
   </span><span class="p">},</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="nt">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
@@ -4881,24 +5272,30 @@ project&rsquo;s icon.</p>
 icon file or empty string in case there isn&rsquo;t an icon for this project yet.</p>
 
 <p>By default all new projects have an empty icon URL.</p>
-<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/abcd/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/projects/6c01/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/icon\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/icon/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
 <h5 id="put">PUT</h5>
 
-<p>PUT to this endpoint to change a project&rsquo;s icon. The payload should have the
- form of a standard multipart/form-data upload. The file&rsquo;s contents will be 
- stored and made available under the project&rsquo;s url.</p>
+<p>PUT to this endpoint to change a project&rsquo;s icon.</p>
+
+<p>The request should have be a standard <code class="prettyprint">multipart/form-data</code> file upload with
+ the file field named <code class="prettyprint">icon</code>.
+The file&rsquo;s contents will be stored and made available under the project&rsquo;s url.</p>
 
 <p>Only the project&rsquo;s editors can change the project&rsquo;s icon.</p>
 
 <p>Valid image extensions: &lsquo;png&rsquo;, &#39;gif&rsquo;, &#39;jpg&rsquo;, &#39;jpeg&rsquo; - Others will 400</p>
+<pre class="highlight http"><code><span class="nf">PUT</span> <span class="nn">/projects/6c01/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Disposition</span><span class="p">:</span> <span class="s">form-data; name="icon"; filename="newicon.jpg"</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">image/jpeg</span>
+</code></pre>
 
 <h4 id="post">POST</h4>
 
@@ -4920,7 +5317,7 @@ to the project.</p>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/order/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">,</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/datasets/a598c7/"</span><span class="w">
@@ -4939,7 +5336,7 @@ Only the project&rsquo;s editors can make these changes.</p>
 </code></pre>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:order"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http:\/\/local.crunch.io:8080\/api\/projects\/6c01\/datasets\/order\/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/order/"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"graph"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="s2">"https://beta.crunch.io/api/datasets/cc9161/"</span><span class="p">,</span><span class="w">
     </span><span class="p">{</span><span class="w">
@@ -5158,9 +5555,42 @@ selected: (optional) boolean indicating whether this category corresponds to a s
 
 <h5 id="subvariables">subvariables</h5>
 
-<p>Multiple Response and Categorical Array variables contain an array of subvariable references. In the HTTP API, these are presented as URLs. To create a variable of type &ldquo;multiple_response&rdquo; or &ldquo;categorical_array&rdquo;, you must include a &ldquo;subvariables&rdquo; member with an array of variable references. These variables will become the subvariables in the new array variable.</p>
+<p>Multiple Response and Categorical Array variables contain an array of subvariable
+ references. In the HTTP API, these are presented as URLs. To create a variable 
+ of type &ldquo;multiple_response&rdquo; or &ldquo;categorical_array&rdquo;, you must include a 
+ &ldquo;subvariables&rdquo; member with an array of subvariable references. These variables 
+ will become the subvariables in the new array variable.</p>
 
-<p>Like Categories, the array of subvariables within an array variable indicate the order in which they are presented; to reorder them, save a modified array of subvariable references.</p>
+<p>Like Categories, the array of subvariables within an array variable indicate
+ the order in which they are presented; to reorder them, save a modified array 
+ of subvariable references.</p>
+
+<p>The shape of each subvariable member must contain a name and optionally an alias.
+They will be created with the matching type according to the parent array.</p>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"categorical_array"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Example array"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"categories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Category 1"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Category 2"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"numeric_value"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"missing"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nt">"subvariables"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subvariable 1"</span><span class="p">}</span><span class="w">
+        </span><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subvariable 2"</span><span class="p">,</span><span class="w"> </span><span class="nt">"alias"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subvar2_alias"</span><span class="p">}</span><span class="w">
+        </span><span class="p">{</span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subvariable 3"</span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
 
 <h5 id="resolution">resolution</h5>
 
