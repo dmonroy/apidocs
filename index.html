@@ -444,7 +444,7 @@ default value instead.</p>
     "body": {
         "conflicts": {
           "cdbd11/": {
-            "metadata": {}
+            "metadata": {},
             "conflicts": [{
               "message": "Types do not match and cannot be converted",
             }]
@@ -454,55 +454,99 @@ default value instead.</p>
 }
 </code></pre>
 
-<p>If any variable conflicts, it will possess one or more &ldquo;conflicts&rdquo; members. For example, if the new variable &ldquo;cdbd11&rdquo; had a different type that could not be converted compared to the existing variable &ldquo;cdbd11&rdquo;, the Batch resource would contain the above message.  Only unresolvable conflicts will be shown; if a variable is not reported in the conflicts object, it appended cleanly.</p>
+<p>If any variable conflicts, it will possess one or more &ldquo;conflicts&rdquo; members. For
+example, if the new variable &ldquo;cdbd11&rdquo; had a different type that could not be
+converted compared to the existing variable &ldquo;cdbd11&rdquo;, the Batch resource would
+contain the above message.  Only unresolvable conflicts will be shown; if a
+variable is not reported in the conflicts object, it appended cleanly.</p>
 
 <p>See <a href="#batches">Batches</a> for more details on batch entities and conflicts.</p>
 
 <h3 id="streaming-rows">Streaming rows</h3>
 
-<p>Existing datasets are best sent to Crunch as a single Source, or a handful of subsequent Sources if gathered monthly or on some other schedule. Sometimes however you want to &ldquo;stream&rdquo; data to Crunch as it is being gathered, even one row at a time, rather than in a single post-processing phase. You do <em>not</em> want to make each row its own batch (it&rsquo;s simply not worth the overhead). Instead, you should make a Stream and send rows to it, then periodically create a Source and Batch from it.</p>
+<p>Existing datasets are best sent to Crunch as a single Source, or a handful of
+subsequent Sources if gathered monthly or on some other schedule. Sometimes
+however you want to &ldquo;stream&rdquo; data to Crunch as it is being gathered, even one
+row at a time, rather than in a single post-processing phase. You do <em>not</em> want
+to make each row its own batch (it&rsquo;s simply not worth the overhead). Instead,
+you should make a Stream and send rows to it, then periodically create a Source
+and Batch from it.</p>
 
 <h4 id="send-rows-to-a-stream">Send rows to a stream</h4>
 
-<p>To send one or more rows to a dataset stream, simply POST one or more lines of <a href="https://en.wikipedia.org/wiki/Line_Delimited_JSON">line-delimited JSON</a> to the dataset&rsquo;s <code class="prettyprint">stream</code> endpoint:</p>
+<p>To send one or more rows to a dataset stream, simply POST one or more lines of
+<a href="https://en.wikipedia.org/wiki/Line_Delimited_JSON">line-delimited JSON</a> to the
+dataset&rsquo;s <code class="prettyprint">stream</code> endpoint:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="nt">"var_id_1"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"var_id_2"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a"</span><span class="p">}</span><span class="w">
 </span></code></pre>
 <pre class="highlight python"><code><span class="n">by_alias</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">by</span><span class="p">(</span><span class="s">'alias'</span><span class="p">)</span>
 <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
     <span class="n">row</span> <span class="o">=</span> <span class="n">my_system</span><span class="o">.</span><span class="n">read_a_row</span><span class="p">()</span>
     <span class="n">importing</span><span class="o">.</span><span class="n">importer</span><span class="o">.</span><span class="n">stream_rows</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="p">{</span>
-        <span class="n">by_alias</span><span class="p">[</span><span class="s">"gender"</span><span class="p">]</span><span class="o">.</span><span class="nb">id</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s">'gender'</span><span class="p">],</span>
-        <span class="n">by_alias</span><span class="p">[</span><span class="s">"age"</span><span class="p">]</span><span class="o">.</span><span class="nb">id</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s">'age'</span><span class="p">]</span>
+        <span class="s">'gender'</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s">'gender'</span><span class="p">],</span>
+        <span class="s">'age'</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s">'age'</span><span class="p">]</span>
     <span class="p">})</span>
 </code></pre>
 
-<p>Streamed values must be keyed either by id or by alias. The variable ids/aliases must correspond to existing variables in the dataset. The Python code shows how to efficiently map aliases to ids. The data must match the target variable types so that we can process the row as quickly as possible. We want no casting or other guesswork slowing us down here. Among other things, this means that categorical values must be represented as Crunch&rsquo;s assigned category ids, not names or numeric values.</p>
+<p>Streamed values must be keyed either by id or by alias. The variable ids/aliases
+must correspond to existing variables in the dataset. The Python code shows how
+to efficiently map aliases to ids. The data must match the target variable types
+so that we can process the row as quickly as possible. We want no casting or
+other guesswork slowing us down here. Among other things, this means that
+categorical values must be represented as Crunch&rsquo;s assigned category ids, not
+names or numeric values.</p>
 
-<p>You may also send more than one row at a time if you prefer. For example, your data collection system may already post-process row data in, say, 5 minute increments. The more rows you can send together, the less overhead spent processing each one and the more you can send in a given time. Send multiple lines of line-delimited JSON, or if using pycrunch, a list of dicts rather than a single dict.</p>
+<p>You may also send more than one row at a time if you prefer. For example, your
+data collection system may already post-process row data in, say, 5 minute
+increments. The more rows you can send together, the less overhead spent
+processing each one and the more you can send in a given time. Send multiple
+lines of line-delimited JSON, or if using pycrunch, a list of dicts rather than
+a single dict.</p>
 
-<p>As when creating a new source, don&rsquo;t worry about sending values for derived variables; Crunch will fill these out for you for each row using the data you send.</p>
+<p>As when creating a new source, don&rsquo;t worry about sending values for derived
+variables; Crunch will fill these out for you for each row using the data you
+send.</p>
 
 <h4 id="append-the-new-rows-to-the-dataset">Append the new rows to the dataset</h4>
 
-<p>The above added new rows to the Stream resource so that you can be confident that your data is completely safe with Crunch. To append those rows to the dataset requires another step. You could stream rows and then, once they are all assembled, append them all as a single Source to the dataset. However, if you&rsquo;re streaming rows at intervals it&rsquo;s likely you want to append them to the dataset at intervals, too. But doing so one row at a time is usually counter-productive; it slows the rate at which you can send rows, balloons metadata, and interrupts users who are analyzing the data.</p>
+<p>The above added new rows to the Stream resource so that you can be confident
+that your data is completely safe with Crunch. To append those rows to the
+dataset requires another step. You could stream rows and then, once they are all
+assembled, append them all as a single Source to the dataset. However, if
+you&rsquo;re streaming rows at intervals it&rsquo;s likely you want to append them to the
+dataset at intervals, too. But doing so one row at a time is usually
+counter-productive; it slows the rate at which you can send rows, balloons
+metadata, and interrupts users who are analyzing the data.</p>
 
-<p>Instead, you control how often you want the streamed rows to be appended to the dataset. When you&rsquo;re ready, POST to <code class="prettyprint">datasets/{id}/batches/</code> and provide the &ldquo;stream&rdquo; member, plus any extra metadata the new Source should possess:</p>
+<p>Instead, you control how often you want the streamed rows to be appended to the
+dataset. When you&rsquo;re ready, POST to <code class="prettyprint">/datasets/{id}/batches/</code> and provide the
+&ldquo;stream&rdquo; member, plus any extra metadata the new Source should possess:</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
     </span><span class="nt">"stream"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
     </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ldjson"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My streamed rows"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yet Another batch from the stream"</span><span class="p">,</span><span class="w">
-</span><span class="err">}</span><span class="w">
+    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yet Another batch from the stream"</span><span class="w">
+</span><span class="p">}</span><span class="w">
 </span></code></pre>
 <pre class="highlight python"><code><span class="n">ds</span><span class="o">.</span><span class="n">batches</span><span class="o">.</span><span class="n">create</span><span class="p">({</span><span class="s">"body"</span><span class="p">:</span> <span class="p">{</span>
     <span class="s">"stream"</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
     <span class="s">"type"</span><span class="p">:</span> <span class="s">"ldjson"</span><span class="p">,</span>
     <span class="s">"name"</span><span class="p">:</span> <span class="s">"My streamed rows"</span><span class="p">,</span>
-    <span class="s">"description"</span><span class="p">:</span> <span class="s">"Yet Another batch from the stream"</span><span class="p">,</span>
+    <span class="s">"description"</span><span class="p">:</span> <span class="s">"Yet Another batch from the stream"</span>
 <span class="p">}})</span>
 </code></pre>
 
-<p>The &ldquo;stream&rdquo; member tells Crunch to acquire rows from the stream to form this Batch. If <code class="prettyprint">null</code>/<code class="prettyprint">None</code>, the system will acquire all currently pending rows (any new rows which arrive during the formation of this Batch will be queued and not fetched). If an integer, the system will attempt to fetch that many rows from the stream, waiting up to 10 seconds for new ones if the number exceeds the number of pending rows. If there are no pending rows, <code class="prettyprint">409 Conflict</code> is returned instead of 201/202 for the new Batch.</p>
+<p>The &ldquo;stream&rdquo; member tells Crunch to acquire rows from the stream to form this
+Batch. If <code class="prettyprint">null</code>, the system will acquire all currently pending rows
+(any new rows which arrive during the formation of this Batch will be queued
+and not fetched). If an integer, the system will attempt to fetch that many
+rows from the stream, waiting up to 10 seconds for new ones if the number
+exceeds the number of pending rows. If there are no pending rows,
+<code class="prettyprint">409 Conflict</code> is returned instead of 201/202 for the new Batch.</p>
+
+<h5 id="pending-rows-will-be-added-automatically">Pending rows will be added automatically</h5>
+
+<p>Every hour, the Crunch system goes through all datasets, and for each that has pending streamed data, it batches up the pending rows and adds them to the dataset automatically, as long as the dataset is not currently in use by someone. That way, streamed data will magically appear in the dataset for the next time a user loads it, but if a user is actively working with the dataset, the system won&rsquo;t update their view of the data and disrupt their session.</p>
 
           <h2 id="deriving-variables">Deriving Variables</h2>
 
