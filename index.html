@@ -1141,6 +1141,21 @@ One dimension for the subvariables: {&ldquo;each&rdquo;: url}</li>
 
 <p>&hellip;and produce a similar one for the &ldquo;stddev&rdquo; measure. You can think of multiple measures as producing &ldquo;overlays&rdquo; over the same dimensions. However, the actual output format (in JSON) is more compact in that the dimensions are not repeated; see Object Reference:Cube output for details.</p>
 
+<p>ZCL expressions are composable. If you need, for example, to find the mean of a categorical variable&rsquo;s &ldquo;numeric_value&rdquo; attributes, cast the variable to the &ldquo;numeric&rdquo; type class before including it as the cube argument:</p>
+<pre class="highlight json"><code><span class="s2">"measures"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"mean"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cube_mean"</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
+            </span><span class="nt">"function"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cast"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="nt">"variable"</span><span class="p">:</span><span class="w"> </span><span class="s2">"datasets/1/variables/3"</span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="nt">"class"</span><span class="p">:</span><span class="w"> </span><span class="s2">"numeric"</span><span class="p">}</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">}]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
 <h3 id="comparisons">Comparisons</h3>
 
 <p>Occasionally, it is useful to compare analyses from different sources. A common example is to define &ldquo;benchmarks&rdquo; for a given analysis, so that you can quickly compare an analysis to an established target. These are, in effect, one analysis laid over another in such a way that at least one of their dimensions lines up (and typically, using the same measures). These are also therefore defined in terms of cubes: one set which defines the base analyses, and another which defines the overlay.</p>
@@ -4138,6 +4153,59 @@ generated regardless of the status of any other pending exports.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
+<h4 id="checking-if-an-append-will-cause-problems">Checking if an append will cause problems</h4>
+
+<p><code class="prettyprint">/datasets/{id}/batches/compare/</code></p>
+
+<p>An append cannot proceed if there are any situations on the datasets involved
+that will cause ambiguous situations. If such datasets were to be appended
+the server will return a 409 response.</p>
+
+<p>It is possible to verify for this conditions before trying the append using
+the batches compare endpoint.</p>
+<pre class="highlight plaintext"><code>GET /datasets/4bc6af/batches/compare/?dataset=http://beta.crunch.io/api/datasets/3e2cfb/
+</code></pre>
+
+<p>The response will contain a conflicts key that can contain either <code class="prettyprint">current</code>, 
+<code class="prettyprint">incoming</code> or <code class="prettyprint">union</code> depending of the type and location of the problem. The response status
+will always be 200, with conflicts, described below, or an empty body.</p>
+
+<ul>
+<li><code class="prettyprint">current</code> refers to issues find on the dataset where new data would be added</li>
+<li><code class="prettyprint">incoming</code> has issues on the far dataset that contains the new data to add</li>
+<li><code class="prettyprint">union</code> expresses problems on the combined variables(metadata) of the final dataset after append.</li>
+</ul>
+<pre class="highlight json"><code><span class="w">
+</span><span class="p">{</span><span class="w">
+    </span><span class="nt">"union"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w">
+    </span><span class="nt">"current"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span><span class="w">
+    </span><span class="nt">"incoming"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre>
+
+<p>A successful response will not contain any of the keys returning an empty object.</p>
+<pre class="highlight json"><code><span class="w">
+</span><span class="p">{}</span><span class="w">
+
+</span></code></pre>
+
+<p>The possible keys in the conflicts and verifications made are:</p>
+
+<ul>
+<li><strong>Subvariables in multiple arrays</strong>: Indicates a problem in the original data. A variable is used as a subvariable in one or more datasets.</li>
+<li><strong>Subvariables without a parent array</strong>: Will contain the IDs of variables that are marked as subvariables, but don’t belong in any array.</li>
+<li><strong>Variables missing alias</strong>: All variables should have a valid alias string. This will indicate the IDs of those that don’t.</li>
+<li><strong>Variables missing name</strong>:  All variables should have a valid name string. This will indicate the IDs of those that don’t.</li>
+<li><strong>Variables with duplicate alias</strong>: In the event of two or more variables sharing an alias, they will be reported here. When this occurs as a <em>union</em> conflict, it is likely that names and aliases of a variable or subvariable in <em>current</em> and <em>incoming</em> are swapped (e.g., VariantOne:AliasOne, Variant1:Alias1 in current but VariantOne:Alias1, Variant1:AliasOne in incoming).</li>
+<li><strong>Variables with duplicate name</strong>: Variable names should be unique across non subvariables.</li>
+<li><strong>Subvariable in different arrays per dataset</strong>: If a subvariable is used for different arrays that are impossible to match, it will be reported here. User action will be needed to fix this.</li>
+</ul>
+
+<p>For each of these, a list of variable IDs will be made available indicating the
+conflicting entities. <em>Union</em> conflicting ids generally refer to variables in 
+the <em>current</em> dataset and may be referenced by alias in <em>incoming</em>.</p>
+
 <h3 id="entity">Entity</h3>
 
 <p><code class="prettyprint">/datasets/{id}/batches/{id}/</code></p>
@@ -4865,9 +4933,6 @@ Here you can create new projects via POST</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="w">
   </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:catalog"</span><span class="p">,</span><span class="w">
   </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"generate_icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/generate_icon/"</span><span class="w">
-  </span><span class="p">},</span><span class="w">
   </span><span class="nt">"index"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
     </span><span class="nt">"http://beta.crunch.io/api/projects/4643/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 1"</span><span class="p">,</span><span class="w">
@@ -5036,6 +5101,18 @@ configured icon is. This url does not point to the <code class="prettyprint">vie
 <p>The <code class="prettyprint">views.icon</code> Shoji view endpoint is used to PUT the icon as a file upload
 for this project.</p>
 
+<h4 id="patch">PATCH</h4>
+
+<p>The attributes that are allowed to be edited for a projet are: </p>
+
+<ul>
+<li>name</li>
+<li>description</li>
+<li>icon_url</li>
+</ul>
+
+<p>Only project editors can make these changes.</p>
+
 <h4 id="delete">DELETE</h4>
 
 <p>Deleting a project will <em>NOT</em> delete its datasets. It will change their 
@@ -5043,7 +5120,7 @@ ownership to the authenticated user. Only project editors can delete a project.<
 <pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/projects/6c01/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 </code></pre>
 
-<h4 id="projects-order">Projects order</h4>
+<h3 id="projects-order">Projects order</h3>
 
 <p>Returns the <code class="prettyprint">shoji:order</code> in which the projects should be displayed for
  the user. This entity is independent for each user.</p>
@@ -5051,7 +5128,7 @@ ownership to the authenticated user. Only project editors can delete a project.<
 <p>As the user is added to more projects, these will be added at the end of the
 <code class="prettyprint">shoji:order</code>.</p>
 
-<h5 id="get">GET</h5>
+<h4 id="get">GET</h4>
 
 <p>Will return a <code class="prettyprint">shoji:order</code> containing a flat list of all the projects where
 the current user belongs to.</p>
@@ -5067,7 +5144,7 @@ the current user belongs to.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h5 id="put">PUT</h5>
+<h4 id="put">PUT</h4>
 
 <p>In order to change the order of the projects, the client will need to PUT the
 full payload back to the server.</p>
@@ -5088,11 +5165,11 @@ a 400 response.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h4 id="members">Members</h4>
+<h3 id="members">Members</h3>
 
 <p>Use this endpoint to manage the users that have access to this project.</p>
 
-<h5 id="members-permissions">Members permissions</h5>
+<h4 id="members-permissions">Members permissions</h4>
 
 <p>Members of a project can be wither viewers or editors. By default all members
 will be viewers and a selected group of them (at least one) will be editor.</p>
@@ -5114,7 +5191,7 @@ editors.</p>
 make changes on the project itself such as changing its name, icon, members 
 management or change members&rsquo; permissions.</p>
 
-<h5 id="get">GET</h5>
+<h4 id="get">GET</h4>
 
 <p>Returns a catalog with all users that have access to this project and their 
 project permissions in the following format:</p>
@@ -5150,7 +5227,7 @@ on the given project.</p>
 
 <p>All project members have read access to this resource.</p>
 
-<h5 id="patch">PATCH</h5>
+<h4 id="patch">PATCH</h4>
 
 <p>Use this method to add or remove members from the project. Only project editors 
 have this capabilities, else you will get a 403 response.</p>
@@ -5196,7 +5273,7 @@ email does not exist, the server will return a 400 response.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h6 id="sending-notifications">Sending notifications</h6>
+<h5 id="sending-notifications">Sending notifications</h5>
 
 <p>The users invited to a project can be both existing Crunch.io users or new
 users that don&rsquo;t have a user account associated with the email.</p>
@@ -5217,11 +5294,11 @@ user to configure their account in order to use the app.</p>
 
 <p>This behavior is the same as described for <a href="#inviting-new-users">inviting new users when sharing a dataset</a></p>
 
-<h4 id="datasets">Datasets</h4>
+<h3 id="datasets">Datasets</h3>
 
 <p>Will list all the datasets that have this project as their owner.</p>
 
-<h5 id="adding-datasets-to-projects">Adding datasets to projects</h5>
+<h4 id="adding-datasets-to-projects">Adding datasets to projects</h4>
 
 <p>The way to add a dataset to a project is by changing the dataset&rsquo;s owner to the
 id of the project you want to take ownership.</p>
@@ -5229,7 +5306,7 @@ id of the project you want to take ownership.</p>
 <p>You must have edit and be current editor on any given dataset to change its
 owner and you must also have edit permissions on the target project.</p>
 
-<h5 id="patch-to-dataset-entity">PATCH to dataset entity</h5>
+<h4 id="patch-to-dataset-entity">PATCH to dataset entity</h4>
 
 <p>Send a PATCH request to the dataset entity that you want to make part of the
 project.</p>
@@ -5238,7 +5315,7 @@ project.</p>
 <pre class="highlight json"><code><span class="p">{</span><span class="nt">"owner"</span><span class="p">:</span><span class="s2">"https://beta.crunch.io/api/projects/abcd/"</span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h5 id="get">GET</h5>
+<h4 id="get">GET</h4>
 
 <p>Will show the list of all datasets where this project is their owner, the 
 shape of the dataset tuple will be the same as in other dataset catalogs.</p>
@@ -5305,12 +5382,12 @@ shape of the dataset tuple will be the same as in other dataset catalogs.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h4 id="icon">Icon</h4>
+<h3 id="icon">Icon</h3>
 
 <p>The icon endpoint for a project is a ShojiView that allows to change the
-project&rsquo;s icon.</p>
+project&rsquo;s icon via file upload or URL.</p>
 
-<h5 id="get">GET</h5>
+<h4 id="get">GET</h4>
 
 <p>On GET, it will return a <code class="prettyprint">shoji:view</code> with its value containing a url to the
 icon file or empty string in case there isn&rsquo;t an icon for this project yet.</p>
@@ -5325,27 +5402,53 @@ icon file or empty string in case there isn&rsquo;t an icon for this project yet
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h5 id="put">PUT</h5>
+<h4 id="put">PUT</h4>
 
 <p>PUT to this endpoint to change a project&rsquo;s icon.</p>
 
-<p>The request should have be a standard <code class="prettyprint">multipart/form-data</code> file upload with
- the file field named <code class="prettyprint">icon</code>.
-The file&rsquo;s contents will be stored and made available under the project&rsquo;s url.</p>
+<p>There are two ways to change the icon, either via file upload or via icon URL.</p>
 
 <p>Only the project&rsquo;s editors can change the project&rsquo;s icon.</p>
 
 <p>Valid image extensions: &lsquo;png&rsquo;, &#39;gif&rsquo;, &#39;jpg&rsquo;, &#39;jpeg&rsquo; - Others will 400</p>
+
+<h5 id="file-upload">File upload</h5>
+
+<p>The request should have be a standard <code class="prettyprint">multipart/form-data</code> file upload with
+ the file field named <code class="prettyprint">icon</code>.
+The file&rsquo;s contents will be stored and made available under the project&rsquo;s url.
+The API will return a 201 response with the stored icon&rsquo;s URL on its Location 
+header.</p>
 <pre class="highlight http"><code><span class="nf">PUT</span> <span class="nn">/projects/6c01/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="na">Content-Disposition</span><span class="p">:</span> <span class="s">form-data; name="icon"; filename="newicon.jpg"</span>
 <span class="na">Content-Type</span><span class="p">:</span> <span class="s">image/jpeg</span>
+</code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">201</span> <span class="ne">Created</span>
+<span class="na">Location</span><span class="p">:</span> <span class="s">https://beta.crunch.io/api/datasets/223fd4/</span>
+</code></pre>
+
+<h5 id="icon-url">Icon URL</h5>
+
+<p>Expects a <code class="prettyprint">Shoji:view</code> request with its value pointing to a publicly accessible
+image resource that will be used as the project&rsquo;s icon. This image will be
+copied to an API local location.</p>
+<pre class="highlight http"><code><span class="nf">PUT</span> <span class="nn">/projects/6c01/datasets/icon/</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"element"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shoji:view"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://beta.crunch.io/api/projects/6c01/datasets/icon/"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://public.domain.com/icon.png"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">201</span> <span class="ne">Created</span>
+<span class="na">Location</span><span class="p">:</span> <span class="s">https://beta.crunch.io/api/datasets/223fd4/</span>
 </code></pre>
 
 <h4 id="post">POST</h4>
 
 <p>Same as PUT</p>
 
-<h4 id="datasets-order">Datasets order</h4>
+<h3 id="datasets-order">Datasets order</h3>
 
 <p>Contains the <code class="prettyprint">shoji:order</code> in which the datasets of this project are to be 
 ordered.</p>
@@ -5353,7 +5456,7 @@ ordered.</p>
 <p>This is endpoint available for all project members but can only be updated by 
 the project&rsquo;s editors.</p>
 
-<h5 id="get">GET</h5>
+<h4 id="get">GET</h4>
 
 <p>Will return the <code class="prettyprint">shoji:order</code> response containing the datasets that belong
 to the project.</p>
@@ -5369,7 +5472,7 @@ to the project.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<h5 id="put">PUT</h5>
+<h4 id="put">PUT</h4>
 
 <p>Allow to make modifications to the <code class="prettyprint">shoji:order</code> for the contained datasets.
 Only the project&rsquo;s editors can make these changes.</p>
