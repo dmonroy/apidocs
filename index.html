@@ -1874,11 +1874,11 @@ attributes:</p>
 
 <h4 id="drafts">Drafts</h4>
 
-<p>A dataset marked as <code class="prettyprint">is_published: false</code> can only be accessed by dataset editors. 
+<p>A dataset marked as <code class="prettyprint">is_published: false</code> can only be accessed by dataset editors.
 They will still be available on the catalog for all shared users but API clients
 should know to display these to the appropriate users.</p>
 
-<p>The <code class="prettyprint">is_published</code> flag of a dataset can be changed by editors from the catalog or 
+<p>The <code class="prettyprint">is_published</code> flag of a dataset can be changed by editors from the catalog or
 directly on the dataset entity.</p>
 
 <h4 id="patch">PATCH</h4>
@@ -2273,32 +2273,51 @@ from the Crunch system and responds with 204 status.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre>
 
-<p>Accessing any of the export URLs will return a <code class="prettyprint">shoji:view</code> with an attribute
-<code class="prettyprint">url</code> pointing to the location of the exported file to be downloaded.</p>
+<p>A GET request on any of the export URLs will return 200 status with a <code class="prettyprint">shoji:view</code>, containing an attribute
+<code class="prettyprint">url</code> pointing to the location of the exported file to be downloaded; GET that URL to download the file. If the dataset does not have any columns of data, the GET on the export view URL will return a 409 response.</p>
 
-<p>Following rules apply for all formats:</p>
+<p>To export a subset of the dataset, instead perform a POST request and include a JSON body with an optional &ldquo;filter&rdquo; expression for the rows and a &ldquo;where&rdquo; attribute to specify variables to include.</p>
+
+<table><thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>filter</td>
+<td>A Crunch filter expression defining a filter for the given export</td>
+<td><code class="prettyprint">{&quot;function&quot;: &quot;==&quot;, &quot;args&quot;: [{&quot;variable&quot;: &quot;000000&quot;}, {&quot;value&quot;: 1}]}</code></td>
+</tr>
+<tr>
+<td>where</td>
+<td>A Crunch expression defining which variables to export</td>
+<td><code class="prettyprint">{&quot;function&quot;: &quot;identify&quot;, &quot;args&quot;: [{&quot;id&quot;: [&quot;000000&quot;]}]}</code></td>
+</tr>
+</tbody></table>
+
+<p>See <a href="#expressions">&ldquo;Expressions&rdquo;</a> for more on Crunch expressions.</p>
+
+<p>The following rules apply for all formats:</p>
 
 <ul>
-<li>All exporting happens synchronously.</li>
-<li>If the dataset does not have any columns, the server will return a 409 response</li>
+<li>The dataset&rsquo;s exclusion filter will be applied; however, any of the user&rsquo;s personal &ldquo;applied filters&rdquo; are not, unless they are explicitly included in the request.</li>
 <li>Hidden/discarded variables are not exported.</li>
-<li>Onnly exclusion filter will be applied.</li>
-<li>User applied filters are not applied.</li>
-<li>Personal(private) variables are not exported.</li>
+<li>Personal (private) variables are not exported.</li>
+<li>Variables (columns) will be ordered in a flattened version of the dataset&rsquo;s hierarchical order.</li>
+<li>Derived variables will be exported with their values, without their functional links.</li>
 </ul>
+
+<p>Some format-specific properties:</p>
 
 <h6 id="spss">SPSS</h6>
 
-<p>Will contain all non personal variables in the same flat order as organized.
-Derived variables will be exported as normal variables and arrays as supported
-by SPSS.</p>
+<p>Categorical-array and multiple-response variables will be exported as &ldquo;mrsets&rdquo;, as supported by SPSS.</p>
 
 <h6 id="csv">CSV</h6>
 
-<p>Will only export base non personal variables in the same flat order as organized
-in the API.</p>
-
-<p>Categorical variables will be exported with their name instead of their value.</p>
+<p>Categorical variable values will be exported with as the category name, not the category id.</p>
 
 <h5 id="summary">Summary</h5>
 
@@ -2909,7 +2928,8 @@ index of those.</p>
     </span><span class="nt">"self"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5ee0a0/variables/"</span><span class="p">,</span><span class="w">
     </span><span class="nt">"orders"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"hier"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5330a0/variables/hier/"</span><span class="p">,</span><span class="w">
-    </span><span class="err">}</span><span class="p">,</span><span class="w">
+        </span><span class="nt">"personal"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5330a0/variables/personal/"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
     </span><span class="nt">"views"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="nt">"weights"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5ee0a0/variables/weights/"</span><span class="p">,</span><span class="w">
         </span><span class="nt">"search"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://beta.crunch.io/api/datasets/5ee0a0/variables/search/?q={token}"</span><span class="w">
@@ -3092,6 +3112,8 @@ the Location header.</p>
 
 <p><code class="prettyprint">/datasets/{id}/variables/hier/</code></p>
 
+<p>Dataset global order containing references to all public variables.</p>
+
 <h4 id="get">GET</h4>
 
 <p>Returns a Shoji Order.</p>
@@ -3116,6 +3138,31 @@ previously existing group will be eliminated and any new groups will be added.
 
 <p>After PUT any variable not present on any of the groups will always be appended
  to the root of the graph.</p>
+
+<h3 id="personal-variable-order">Personal Variable Order</h3>
+
+<p><code class="prettyprint">/datasets/{id}/variables/personal/</code></p>
+
+<p>Unlike the hierarchical order, the personal variable order returns different
+content per user.
+Each user can add variable references to it including personal variables and 
+will not be shared with other users.</p>
+
+<p>The personal variable order defaults to an empty Shoji order until each user
+makes changes to it.</p>
+
+<h4 id="get">GET</h4>
+
+<p>Returns a Shoji Order for this user.</p>
+
+<h4 id="patch">PATCH</h4>
+
+<p>Same as hierarchical order, receives a Shoji Order representation to overwrite
+the existing order. Personal variables are allowed here.</p>
+
+<h4 id="put">PUT</h4>
+
+<p>Behaves sames as PATCH.</p>
 
 <h3 id="weights">Weights</h3>
 
@@ -3478,10 +3525,9 @@ as well as basic summary statistics:</li>
 <ul>
 <li>count: The number of entries in the variable.</li>
 <li>valid_count: The number of entries in the variable which are not missing.</li>
-<li>frequencies: An array of row objects. Each row represents a distinct valid value, and includes it as the &ldquo;value&rdquo; member. The number of entries which possess that value is included as the &ldquo;count&rdquo; member. The length of the array is limited to 10 entries; if more than 10 distinct values are present in the data, an 11th row is added with a &ldquo;value&rdquo; member of &ldquo;(Others)&rdquo;, summing their counts.</li>
 <li>missing_count: The number of entries in the variable which are missing.</li>
-<li>missing_frequencies: An array of row objects. Each row represents a distinct missing reason, and includes the reason phrase as the &ldquo;value&rdquo; member. The number of entries which are missing for that reason is included as the &ldquo;count&rdquo; member.</li>
 <li>nunique: The number of distinct values in the data.</li>
+<li>sample: A sample of 5 entries of the data.</li>
 </ul>
 
 <p>In addition:</p>
@@ -4938,12 +4984,14 @@ Here you can create new projects via POST</p>
       </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 1"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4643"</span><span class="p">,</span><span class="w">
       </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"http://beta.crunch.io/api/projects/6c01/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Project 2"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6c01"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Description of project 2"</span><span class="w">
+      </span><span class="s2">"permissions"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"view"</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"edit:"</span><span class="err">true</span><span class="nt">"}
+    },
+    "</span><span class="err">http</span><span class="p">:</span><span class="err">//beta.crunch.io/api/projects/</span><span class="mi">6</span><span class="err">c</span><span class="mi">01</span><span class="err">/</span><span class="s2">": {
+      "</span><span class="err">name</span><span class="s2">": "</span><span class="err">Project</span><span class="w"> </span><span class="mi">2</span><span class="s2">",
+      "</span><span class="err">id</span><span class="s2">": "</span><span class="mi">6</span><span class="err">c</span><span class="mi">01</span><span class="s2">",
+      "</span><span class="err">icon</span><span class="s2">": "",
+      "</span><span class="err">description</span><span class="s2">": "</span><span class="err">Description</span><span class="w"> </span><span class="err">of</span><span class="w"> </span><span class="err">project</span><span class="w"> </span><span class="mi">2</span><span class="s2">"
+      "</span><span class="err">permissions</span><span class="s2">": {"</span><span class="err">view</span><span class="s2">":true, "</span><span class="err">edit:</span><span class="s2">"true"</span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
@@ -4980,6 +5028,12 @@ Here you can create new projects via POST</p>
 <td>url</td>
 <td>&ldquo;&rdquo;</td>
 <td>Url for the icon file for the project. Empty string if not set</td>
+</tr>
+<tr>
+<td>permissions</td>
+<td>object</td>
+<td>{}</td>
+<td>permissions possessed by querying user against project</td>
 </tr>
 </tbody></table>
 
@@ -5886,12 +5940,125 @@ They will be created with the matching type according to the parent array.</p>
 
 <p>You may include a &ldquo;references&rdquo; member to provide a name, alias, description, etc to the output of the function.</p>
 
-<!-- 
-##### Supported functions
+<h5 id="supported-functions">Supported functions</h5>
 
-LIST THEM -->
+<p>Here is a list of all functions available for crunch expressions.  Note that these functions can be used in conjuction
+to compose an expression.</p>
 
-<!-- typeof -->
+<h5 id="binary-functions">Binary functions</h5>
+
+<ul>
+<li><code class="prettyprint">+</code> add</li>
+<li><code class="prettyprint">-</code> subtract</li>
+<li><code class="prettyprint">*</code> multiply</li>
+<li><code class="prettyprint">/</code> div divide</li>
+<li><code class="prettyprint">//</code> floor division</li>
+<li><code class="prettyprint">^</code> power</li>
+<li><code class="prettyprint">%</code> modulus</li>
+<li><code class="prettyprint">&amp;</code> bitwise and</li>
+<li><code class="prettyprint">|</code> bitwise or</li>
+<li><code class="prettyprint">~</code> invert</li>
+</ul>
+
+<h5 id="builtin-functions">Builtin functions</h5>
+
+<ul>
+<li><code class="prettyprint">bin</code> Return column&rsquo;s values broken into equidistant bins.</li>
+<li><code class="prettyprint">bind</code> Return the given Frame materialized as an array.</li>
+<li><code class="prettyprint">case</code> Evaluate the given conditions in order, selecting the corresponding choice.</li>
+<li><code class="prettyprint">cast</code> Return a Column of column&rsquo;s values cast to the given type.</li>
+<li><code class="prettyprint">char_length</code> Return the length of each string (or missing reason) in the given column.</li>
+<li><code class="prettyprint">copy_variable</code> Returns a copy of the column with a copy of its metadata.</li>
+<li><code class="prettyprint">combine_categories</code> Return a column of categories combined according to the category_info.</li>
+<li><code class="prettyprint">combine_responses</code> Combine the given categorical variables into a new one.</li>
+<li><code class="prettyprint">current_batch</code> Return the batch_id of the current frame.</li>
+<li><code class="prettyprint">get</code> Return a subvariable from the given column.</li>
+<li><code class="prettyprint">lookup</code> Map each row of source through its keys index to a corresponding value.</li>
+<li><code class="prettyprint">missing</code> Return the given column as missing for the given reason.</li>
+<li><code class="prettyprint">normalize</code> Return a Column with the given values normalized so sum&copy; == len&copy;.</li>
+<li><code class="prettyprint">row</code> Return a Numeric column with row indices.</li>
+<li><code class="prettyprint">selected_array</code> Return a bool Array from the given categorical, plus None/<strong>none</strong>/<strong>any</strong> .</li>
+<li><code class="prettyprint">typeof</code> Return (a copy of) the Type of the given column.</li>
+<li><code class="prettyprint">unmissing</code> Return the given column with user missing replaced by valid values.</li>
+</ul>
+
+<h5 id="comparisons">Comparisons</h5>
+
+<ul>
+<li><code class="prettyprint">==</code> equals</li>
+<li><code class="prettyprint">!=</code> not equals</li>
+<li><code class="prettyprint">=&gt;&lt;=</code> between</li>
+<li><code class="prettyprint">between</code> between</li>
+<li><code class="prettyprint">&lt;</code> less than</li>
+<li><code class="prettyprint">&gt;</code> greater than</li>
+<li><code class="prettyprint">&lt;=</code> less than or equal</li>
+<li><code class="prettyprint">&gt;=</code> greater than or equal</li>
+<li><code class="prettyprint">in</code> in</li>
+<li><code class="prettyprint">all</code> all selected</li>
+<li><code class="prettyprint">any</code> any selected</li>
+<li><code class="prettyprint">contains</code> Return a mask where A is an element of array B, or a key of object B.</li>
+<li><code class="prettyprint">icontains</code> Case-insensitive version of &lsquo;contains&rsquo;</li>
+<li><code class="prettyprint">~=</code> compare against regular expression (regex)</li>
+<li><code class="prettyprint">and</code> logical and</li>
+<li><code class="prettyprint">or</code> logical or</li>
+<li><code class="prettyprint">not</code> logical not</li>
+<li><code class="prettyprint">is_valid</code> Boolean array of rows which are valid for the given column</li>
+<li><code class="prettyprint">is_missing</code> Boolean array of rows which are missing for the given column</li>
+<li><code class="prettyprint">any_missing</code> Boolean array of rows where any of the subvariables are missing</li>
+<li><code class="prettyprint">all_valid</code> Boolean array of rows where all of the subvariables are valid</li>
+<li><code class="prettyprint">all_missing</code> Boolean array of rows where all of the subvariables are missing</li>
+<li><code class="prettyprint">is_none_of_the_above</code> is none of the above</li>
+</ul>
+
+<h5 id="date-functions">Date Functions</h5>
+
+<ul>
+<li><code class="prettyprint">default_rollup_resolution</code> default_rollup_resolution</li>
+<li><code class="prettyprint">datetime_to_numeric</code> Convert the given datetime column to numeric.</li>
+<li><code class="prettyprint">format_datetime</code> Convert datetime values to strings using the fmt as strftime mask.</li>
+<li><code class="prettyprint">numeric_to_datetime</code> Convert the given numeric column to datetime with the given resolution.</li>
+<li><code class="prettyprint">parse_datetime</code> Parse string to datetime using optional format string</li>
+<li><code class="prettyprint">rollup</code> Return column&rsquo;s values (which must be type datetime) into calendrical bins.</li>
+</ul>
+
+<!-- #### Frame Functions -->
+
+<h5 id="measures-functions">Measures Functions</h5>
+
+<ul>
+<li><code class="prettyprint">cube_count</code></li>
+<li><code class="prettyprint">cube_distinct_count</code></li>
+<li><code class="prettyprint">cube_max</code> A measure which returns the maximum value in a column.</li>
+<li><code class="prettyprint">cube_mean</code></li>
+<li><code class="prettyprint">cube_min</code> A measure which returns the minimum value in a column.</li>
+<li><code class="prettyprint">cube_missing_frequencies</code> Return an object with parallel &#39;code&rsquo; and &#39;count&rsquo; arrays.</li>
+<li><code class="prettyprint">cube_quantile</code></li>
+<li><code class="prettyprint">cube_stddev</code> A measure which returns the standard deviation value in a column.</li>
+<li><code class="prettyprint">cube_sum</code></li>
+<li><code class="prettyprint">cube_valid_count</code></li>
+<li><code class="prettyprint">cube_weighted_max</code></li>
+<li><code class="prettyprint">cube_weighted_min</code></li>
+<li><code class="prettyprint">top</code> Return the given (1D/1M) cube, filtered to its top N members.</li>
+</ul>
+
+<h5 id="variables-searching-functions">Variables searching functions</h5>
+
+<ul>
+<li><code class="prettyprint">identify</code> Return the set of variable ids which match the given criteria</li>
+<li><code class="prettyprint">search_variable</code> Boolean array of variable rows which match terms.</li>
+</ul>
+
+<h5 id="cube-functions">Cube Functions</h5>
+
+<ul>
+<li><code class="prettyprint">autocube</code> Return a cube crossing A by B (which may be None).</li>
+<li><code class="prettyprint">autofreq</code> Return a cube of frequencies for A.</li>
+<li><code class="prettyprint">cube</code> Return a Cube instance from the given arguments.</li>
+<li><code class="prettyprint">each</code> Yield one expression result per item in the given iterable.</li>
+<li><code class="prettyprint">multitable</code> Return cubes for each target variable crossed by None + each template variable.</li>
+<li><code class="prettyprint">transpose</code> Transpose the given cube, rearranging its (0-based) axes to the given order.</li>
+<li><code class="prettyprint">stack</code> Return a cube of 1 more dimension formed by stacking the given array.</li>
+</ul>
 
 <h4 id="filter-terms">Filter terms</h4>
 
